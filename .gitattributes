@@ -4,3 +4,8 @@
 # MARC files are binary. The golden fixture is compared byte-for-byte, so
 # line-ending normalization would corrupt it.
 *.mrc binary
+
+# Images are binary too. `* text=auto` above would happily mangle them.
+*.gif binary
+*.png binary
+*.jpg binary

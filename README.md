@@ -9,6 +9,10 @@ into a library ILS. You scan a shelf (ISBN, then item barcode, two lines per
 book), run two commands, and get a `.mrc` file plus a report telling you which
 records a human needs to look at.
 
+![A terminal session: retrocat triages a shelf scan, flags the one book no API
+could identify, and after that title is filled in by hand, builds an
+import-ready MARC file](https://raw.githubusercontent.com/mrnouiouat/retrocat/main/docs/demo.gif)
+
 I wrote it for The Islamic Seminary of America in Richardson, TX. They had
 2,000+ books that had never been cataloged and a plan to type them all in by
 hand over the next four to six months. Their president approved open-sourcing
