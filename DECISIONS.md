@@ -255,3 +255,19 @@ record the owner reads instead of re-deriving the reasoning.
   callnumber modes. 285 tests green.
 
 (Both repos pushed: retrocat `main`, source repo `master`.)
+
+## Adopter dry-run on the source library's real data (2026-08-09)
+
+Ran retrocat exactly as a new library would — fresh scratch directory, real
+64-line shelf scan + real ~2,100-row ILS export copied in (never into this
+repo), `config.toml` copied from the sample and edited in four places, cold
+cache, live APIs. Full flow: shelf triage → worklist (the operator's real
+hand-entered title survived the merge) → final build (32 records, all
+round-trip, nothing unfilled). Then diffed row-by-row against the original
+internal pipeline on the same data: identical classifications, 30/32
+identical call numbers, with every divergence traced to Google Books being
+unavailable during the cold run (details now in docs/VALIDATION.md,
+"Reproduction check"). One real caveat surfaced and documented there: the
+008 language signal often comes only from Google, so Google-down runs stamp
+the default language on non-English books — the worklist `language` column
+is the hand-fix.

@@ -23,6 +23,34 @@ repository; this repo carries a structural golden file regenerated from the
 pipeline with substituted institution values — see `tests/fixtures/README.md`
 for the exact provenance.
 
+## Reproduction check: retrocat vs. the original internal tool (2026-08-09)
+
+As an adopter dry-run, retrocat was pointed at the source library's *real*
+first-shelf data (64-line scan file, ~2,100-row ILS export, the operator's
+actual hand-filled worklist) from a fresh directory with a fresh
+`config.toml` — copied from `sample/config.toml` and edited in four places
+(library identity, barcode ranges, column names, output filename) — with a
+cold lookup cache, live APIs, and Google Books unavailable. Compared
+row-by-row against the original internal pipeline on the same data:
+
+- **Bucket counts and per-barcode classifications: identical** (32 books:
+  31 CREATE, 1 MANUAL). Record counts identical (32, all round-trip).
+- **30/32 call numbers identical.** The two divergences were the two books
+  whose subject class had to be defaulted without Google's category data —
+  exactly the books the review digest flags "verify shelving" in both runs.
+- Remaining diffs (title casing on 18 records, one 008 language code) all
+  traced to source availability: with Google down, OpenLibrary's
+  sentence-case titles win the per-field priority, and a language signal
+  only Google carried fell back to the configured default. Same books, same
+  structure, no classification drift.
+
+Caveat that surfaced: **the 008 language signal often comes only from
+Google Books** (LoC misses many small-press titles), so with Google
+unavailable, non-English books stamp the configured default language. The
+manual worklist's `language` column is the hand-fix for books you know are
+non-English; a spot-check of 008s is worthwhile if Google was down during
+your run.
+
 ## Structurally tested but NOT sandbox-validated
 
 - **Multi-copy grouping** (same ISBN on two barcodes → one resource record
