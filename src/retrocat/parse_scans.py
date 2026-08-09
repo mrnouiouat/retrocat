@@ -5,7 +5,7 @@ barcode, repeating. Lone barcodes (no-ISBN books) are legal; two ISBNs in a
 row are not. Whitespace-only lines, CRLF, and a UTF-8 BOM are tolerated.
 
 What counts as a barcode comes from ``BarcodeConfig`` (length, optional
-min/max) — nothing here hard-codes any library's numbering scheme.
+min/max), nothing here hard-codes any library's numbering scheme.
 """
 
 from __future__ import annotations
@@ -90,7 +90,7 @@ def _classify_token(
 
 
 def _validate_isbn_checksum(token: str, file: str, line: int) -> None:
-    """Checksum-validate every ISBN token — catches typed-in transcription typos."""
+    """Checksum-validate every ISBN token, catches typed-in transcription typos."""
     if len(token) == 13:
         if not token.isdigit():
             raise ScanParseError(file, line, f"ISBN-13 {token!r} contains non-digits")
@@ -101,13 +101,13 @@ def _validate_isbn_checksum(token: str, file: str, line: int) -> None:
         if not is_valid_isbn13(token):
             raise ScanParseError(
                 file, line,
-                f"ISBN-13 {token!r} fails its check digit — likely a typo, re-enter it",
+                f"ISBN-13 {token!r} fails its check digit, likely a typo, re-enter it",
             )
     else:
         if not is_valid_isbn10(token):
             raise ScanParseError(
                 file, line,
-                f"ISBN-10 {token!r} fails its check digit — likely a typo, re-enter it",
+                f"ISBN-10 {token!r} fails its check digit, likely a typo, re-enter it",
             )
 
 
@@ -117,7 +117,7 @@ def parse_scan_file(
     """Parse one scan file via the pairing state machine.
 
     States: EXPECT_ISBN (no pair open) and EXPECT_BARCODE (an ISBN is pending).
-    Transitions (see docs/DESIGN.md — these exact behaviors are contractual):
+    Transitions (see docs/DESIGN.md, these exact behaviors are contractual):
       EXPECT_ISBN    + ISBN    -> open a pair, EXPECT_BARCODE
       EXPECT_ISBN    + barcode -> emit LoneBarcode (no-ISBN book), stay
       EXPECT_BARCODE + barcode -> emit ScanPair, EXPECT_ISBN
@@ -139,7 +139,7 @@ def parse_scan_file(
             continue  # whitespace-only line: skip, don't error
         token = normalize(stripped)
         if not token:
-            # Non-blank line with no digits at all — junk, not an empty line.
+            # Non-blank line with no digits at all, junk, not an empty line.
             raise ScanParseError(
                 fname, lineno,
                 f"malformed line {stripped!r}: not a 10/13-digit ISBN or "
@@ -152,13 +152,13 @@ def parse_scan_file(
                 if token == pending_isbn:
                     raise ScanParseError(
                         fname, lineno,
-                        f"same ISBN {token} twice in a row — likely a double-scan, "
+                        f"same ISBN {token} twice in a row, likely a double-scan, "
                         "delete one line",
                     )
                 raise ScanParseError(
                     fname, lineno,
                     f"two different ISBNs in a row ({pending_isbn} at line "
-                    f"{pending_line}, then {token}) — a barcode was never scanned "
+                    f"{pending_line}, then {token}), a barcode was never scanned "
                     "for the first one",
                 )
             pending_isbn = token
@@ -176,7 +176,7 @@ def parse_scan_file(
     if pending_isbn is not None:
         raise ScanParseError(
             fname, pending_line,
-            f"file ends with unpaired ISBN {pending_isbn} — its barcode was never scanned",
+            f"file ends with unpaired ISBN {pending_isbn}, its barcode was never scanned",
         )
     return books
 
@@ -201,7 +201,7 @@ def dedupe_scans(books: Iterable[ScannedBook]) -> list[ScannedBook]:
         this_isbn = book.isbn if isinstance(book, ScanPair) else None
         if prior_isbn == this_isbn:
             logger.info(
-                "barcode %s rescanned identically (%s:%d and %s:%d) — deduped",
+                "barcode %s rescanned identically (%s:%d and %s:%d), deduped",
                 book.barcode, prior.source_file, prior.line,
                 book.source_file, book.line,
             )
@@ -210,7 +210,7 @@ def dedupe_scans(books: Iterable[ScannedBook]) -> list[ScannedBook]:
             book.source_file, book.line,
             f"barcode {book.barcode} paired with two different ISBNs "
             f"({prior_isbn or 'none'} at {prior.source_file}:{prior.line}, "
-            f"{this_isbn or 'none'} here) — mispaired scan or sticker on the wrong book",
+            f"{this_isbn or 'none'} here), mispaired scan or sticker on the wrong book",
         )
     return result
 

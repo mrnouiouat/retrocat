@@ -3,22 +3,22 @@
 Two pipeline commands, matching how a shelf-by-shelf backfill actually runs
 (see docs/OPERATOR-GUIDE.md):
 
-    # Per-shelf triage run — isolates one shelf's problems. Writes
+    # Per-shelf triage run, isolates one shelf's problems. Writes
     # output/<shelf>/ (reports + <shelf>.mrc) and a fill-in worklist at
     # manual/<shelf>.csv for any book whose ISBN resolved nothing online.
     retrocat shelf --scan scans/shelf-a.txt --export catalog_export.csv
 
-    # Combined build for import — parses ALL shelves together (correct
+    # Combined build for import, parses ALL shelves together (correct
     # cross-shelf dedupe + multi-copy grouping), ingests every filled
     # manual/*.csv, and writes the ONE file to import into your ILS.
     retrocat final --scans scans/ --export catalog_export.csv
 
 The final file is built by re-running over all shelves, NOT by concatenating
-per-shelf .mrc files — that is what makes a book appearing on two shelves
+per-shelf .mrc files, that is what makes a book appearing on two shelves
 import as one resource with two copies. Per-shelf .mrc files are for triage
 spot-checks only.
 
-Both pipeline commands read config.toml (or --config PATH) — see
+Both pipeline commands read config.toml (or --config PATH), see
 sample/config.toml.
 
 Plus one standalone tool that needs no config and no network:
@@ -68,7 +68,7 @@ def _load_dotenv(start: Path | None = None) -> None:
     Populates os.environ from the nearest ``.env`` found at or above the
     working directory. An already-set environment variable always wins, so an
     explicit ``export`` / ``$env:`` overrides the file. This is how
-    GOOGLE_BOOKS_API_KEY is persisted between runs — see .env.example.
+    GOOGLE_BOOKS_API_KEY is persisted between runs, see .env.example.
     """
     here = (start or Path.cwd()).resolve()
     for directory in (here, *here.parents):
@@ -155,7 +155,7 @@ def _cmd_final(args: argparse.Namespace, config: Config) -> int:
         cache_path=args.cache,
         # mrc_name=None -> [output].mrc_filename from config
         # The combined worklist here is a leftover report of any STILL-unfilled
-        # manual books across all shelves — it is not the fill-in source.
+        # manual books across all shelves, it is not the fill-in source.
         manual_worklist_path=out_dir / "unfilled_manual.csv",
         manual_entries=manual_entries,
         allow_conflicts=args.allow_conflicts,
@@ -178,7 +178,7 @@ def _callnumber_batch(path: Path) -> int:
 
     Input needs an ``lc_class`` column; ``author``, ``title``, ``year``, and
     ``corporate`` are optional. Rows with no lc_class get an empty
-    call_number and a warning rather than a fabricated class — inferring the
+    call_number and a warning rather than a fabricated class, inferring the
     subject is the pipeline's job, not this tool's.
     """
     with open(path, encoding="utf-8-sig", newline="") as f:
@@ -197,7 +197,7 @@ def _callnumber_batch(path: Path) -> int:
             lc_class = (row.get("lc_class") or "").strip()
             if not lc_class:
                 blank += 1
-                logging.warning("%s line %d: no lc_class — call_number left "
+                logging.warning("%s line %d: no lc_class, call_number left "
                                 "blank", path, lineno)
                 writer.writerow([*(row.get(c) or "" for c in reader.fieldnames), ""])
                 continue
@@ -235,7 +235,7 @@ def _cmd_callnumber(args: argparse.Namespace) -> int:
         return 0
     if not args.lc_class:
         logging.error(
-            "nothing to do — give --lc-class (with --author/--title/--year), "
+            "nothing to do: give --lc-class (with --author/--title/--year), "
             "--cutter WORD, or --batch FILE.csv"
         )
         return 1

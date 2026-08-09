@@ -1,7 +1,7 @@
 """Tests for isbn.py conversions and checksum validators.
 
 The two conversion pairs in TestConversion are regression anchors verified
-against a real catalog export during the original internal deployment — they
+against a real catalog export during the original internal deployment, they
 pin the 10->13 math to known-true values, not just to itself.
 """
 

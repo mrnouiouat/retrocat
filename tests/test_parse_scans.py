@@ -1,4 +1,4 @@
-"""Tests for parse_scans.py — every state-machine transition.
+"""Tests for parse_scans.py, every state-machine transition.
 
 The pairing state machine (docs/DESIGN.md "Scan files") has two deliberately
 non-obvious cases that are contractual and must not be "fixed":
@@ -65,7 +65,7 @@ class TestHappyPath:
 class TestTwoBarcodesInARow:
     def test_not_an_error_second_is_lone(self, tmp_path):
         # docs/DESIGN.md "Pairing validation": two barcodes with no ISBN
-        # between them is NOT an error — the first barcode closes the previous
+        # between them is NOT an error, the first barcode closes the previous
         # pair, the second is a lone-barcode (no-ISBN book). Contractual; do
         # not "fix" this into an error.
         p = write_scan(tmp_path, [ISBN13_A, BC1, BC2])
@@ -198,7 +198,7 @@ class TestMalformedTokens:
         assert "maximum" in str(exc.value)
 
     def test_no_bounds_accepts_any_six_digit_token(self, tmp_path):
-        # A library with no barcode numbering scheme sets no min/max — any
+        # A library with no barcode numbering scheme sets no min/max, any
         # 6-digit line is then a barcode.
         p = write_scan(tmp_path, ["000001"])
         (book,) = parse_scan_file(p, BarcodeConfig(length=6))
@@ -271,7 +271,7 @@ class TestDedupeScans:
 
 class TestParseScanDir:
     def test_reads_sorted_txt_files(self, tmp_path):
-        # b.txt written first, a.txt second — output must be in sorted
+        # b.txt written first, a.txt second, output must be in sorted
         # filename order, not creation order.
         write_scan(tmp_path, [ISBN13_B, BC2], name="b.txt")
         write_scan(tmp_path, [ISBN13_A, BC1], name="a.txt")

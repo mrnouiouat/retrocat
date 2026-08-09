@@ -8,7 +8,7 @@ MARC field-by-field against fixtures/pilot_golden_output.mrc.
 Provenance (read fixtures/README.md): the pilot's ISBNs/titles/authors are
 real and its *field mapping* was validated by an ILS vendor loading the
 original pilot file into their sandbox, but barcodes and institution values
-here are substituted, so this .mrc is a **structural golden file** — a
+here are substituted, so this .mrc is a **structural golden file**, a
 regression pin regenerated from the pipeline (scripts/regen_golden.py), not
 the vendor-accepted bytes. The behavioral claims that make it more than a
 self-fulfilling snapshot are asserted explicitly below: bucket counts, the
@@ -43,7 +43,7 @@ from retrocat.pipeline import run_pipeline
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 BUILD_DATE = date(2026, 6, 30)  # pinned so the 008 is deterministic
 
-# The golden run's config — mirrors sample/config.toml's generic scheme.
+# The golden run's config, mirrors sample/config.toml's generic scheme.
 CONFIG = Config(
     library=LibraryConfig(
         home_library="Anytown College Library",
@@ -61,30 +61,30 @@ CONFIG = Config(
 )
 
 # The four merge candidates. 9781933633084 / 9780312156480 are stored in the
-# fixture export in ISBN-10 form only — raw string comparison would misfile
+# fixture export in ISBN-10 form only, raw string comparison would misfile
 # them as CREATE and silently duplicate the resource; canonical ISBN-13
 # comparison is what catches them.
 MERGE_ISBNS = {
-    "9781565645998",  # 500149 — export stores 1565645995 AND 9781565645998
-    "9781933633084",  # 500150 — export stores 1933633085
-    "9780312156480",  # 500152 — export stores 0312156480
-    "9781565646988",  # 500155 — export stores 9781565646988 only
+    "9781565645998",  # 500149, export stores 1565645995 AND 9781565645998
+    "9781933633084",  # 500150, export stores 1933633085
+    "9780312156480",  # 500152, export stores 0312156480
+    "9781565646988",  # 500155, export stores 9781565646988 only
 }
 # Merge candidates whose export-stored ISBN-10 form must ride along as a
-# second (repeatable) 020 — insurance for ILS merge tools that match ISBN
+# second (repeatable) 020, insurance for ILS merge tools that match ISBN
 # strings literally.
 DUAL_020_ISBNS = {"9781565645998", "9781933633084", "9780312156480"}
 
 MANUAL_BARCODE = "500165"
 MANUAL_ISBN = "9781515129158"
-UNRESOLVED_CALL_ISBN = "9780691172422"  # 500157 — pilot resolved no call number
+UNRESOLVED_CALL_ISBN = "9780691172422"  # 500157, pilot resolved no call number
 
 
 class StubLookupClient:
     """Offline stand-in for LookupClient, built from the expected-output CSV.
 
-    Placeholder cells — a title starting with '(' (e.g. '(needs title)') or
-    a call number that is empty/starts with '(' (e.g. '(pending)') — map to
+    Placeholder cells, a title starting with '(' (e.g. '(needs title)') or
+    a call number that is empty/starts with '(' (e.g. '(pending)'), map to
     None, so the unresolved paths behave exactly as they did in the pilot.
     """
 
@@ -199,7 +199,7 @@ def test_golden_field_level_content(pipeline_run):
         else:
             assert forms == [isbn], isbn
 
-    # The unresolved call number stays unresolved — no 050, no $h anywhere.
+    # The unresolved call number stays unresolved, no 050, no $h anywhere.
     unresolved = by_isbn[UNRESOLVED_CALL_ISBN]
     assert unresolved.get_fields("050") == []
     assert all("h" not in [s.code for s in f.subfields]
@@ -249,9 +249,9 @@ def test_manual_worklist_exactly_the_no_title_book(pipeline_run):
     assert len(rows) == 1
     assert rows[0]["barcode"] == MANUAL_BARCODE
     assert not rows[0]["language"].strip()  # operator-supplied, blank -> default
-    # This book had an ISBN scanned but no source resolved a title — the ISBN
+    # This book had an ISBN scanned but no source resolved a title, the ISBN
     # is carried into the worklist and the note points at it (real
-    # self-published/POD edge case — never "fixed" into a placeholder CREATE).
+    # self-published/POD edge case, never "fixed" into a placeholder CREATE).
     assert rows[0]["isbn"] == MANUAL_ISBN
     assert not rows[0]["title"].strip()  # left blank for the operator
     assert MANUAL_ISBN in rows[0]["notes"]
@@ -270,7 +270,7 @@ def test_master_table_rows_and_sort_order(pipeline_run):
     assert len(rows) == 20  # one row per scanned book
     # sorted by action (col 2) then barcode (col 1); shelf is col 0
     assert rows == sorted(rows, key=lambda r: (r[2], r[1]))
-    # every row carries its shelf — here the single fixture file 'pilot'
+    # every row carries its shelf, here the single fixture file 'pilot'
     assert {r[0] for r in rows} == {"pilot"}
 
 
@@ -283,7 +283,7 @@ def test_reconcile_csv_one_row_per_merge_resource(pipeline_run):
     assert len(rows) == 4
     assert {r["isbn"] for r in rows} == MERGE_ISBNS
     # The fixture export deliberately carries junk call numbers ('2106',
-    # 'E2-10') on two merge rows — both must be flagged needs_fix.
+    # 'E2-10') on two merge rows, both must be flagged needs_fix.
     flagged = {r["isbn"] for r in rows if r["needs_fix"] == "True"}
     assert {"9781933633084", "9780312156480"} <= flagged
 

@@ -7,7 +7,7 @@
 # built for an academic religious-studies (Islamic seminary) library and
 # its Tier 1 reflects that. It covers the small BISAC vocabulary Google
 # actually returns, so it works acceptably as a general-collection default,
-# but you should review Tier 1 — and the fiction note at the bottom —
+# but you should review Tier 1, and the fiction note at the bottom ,
 # against your own collection. Point [lookup].class_map_file in config.toml
 # at your own copy to override without touching the package.
 #
@@ -16,7 +16,7 @@
 # ("islamic law" before "islam", "social science" before "science",
 # "business & economics" before "business", "performing arts" before "art").
 
-# Last-resort class used when NOTHING maps — no authoritative call number
+# Last-resort class used when NOTHING maps, no authoritative call number
 # and no matching keyword. The project rule is that every titled book leaves
 # with a call number, never blank, so it can always be shelved somewhere.
 # "AC" is LC "General Works / Collections", the honest neighborhood for a

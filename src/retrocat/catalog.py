@@ -9,7 +9,7 @@ logged and skipped, never raised on.
 **Header validation is a hard gate.** Every configured column name is checked
 against the file's real header row before any row is read; a mismatch aborts
 listing what is missing. Without this, a renamed ISBN column would make every
-book classify as CREATE — the dedup that is the entire point of the tool would
+book classify as CREATE, the dedup that is the entire point of the tool would
 silently stop working, and the reconciliation gate could not catch it because
 the bucket counts still balance.
 """
@@ -81,10 +81,10 @@ def _split_barcodes(value: str, resource_id: str) -> list[str]:
         if part.isdigit():
             barcodes.append(part)
         else:
-            # e.g. a call-number-shaped string in the Barcode column — real
+            # e.g. a call-number-shaped string in the Barcode column, real
             # junk observed in production exports; skip the value, keep the
             # row. DEBUG: this is expected, tolerated junk that repeats every
-            # run — the load summary reports the aggregate; run -v to see
+            # run, the load summary reports the aggregate; run -v to see
             # each value.
             logger.debug(
                 "resource %s: skipping non-numeric barcode value %r",
@@ -120,7 +120,7 @@ def _validate_headers(
             f"{path}: configured column(s) not found in export header: "
             + ", ".join(missing)
             + f". Header row has: {', '.join(fieldnames)}. Fix "
-            "[catalog.columns] in your config — a silently-missing ISBN or "
+            "[catalog.columns] in your config: a silently-missing ISBN or "
             "barcode column would disable deduplication entirely."
         )
 
@@ -130,7 +130,7 @@ def load_catalog(path: str | Path, cfg: CatalogConfig) -> ExistingCatalog:
     cols = cfg.columns
     catalog = ExistingCatalog(has_call_numbers=bool(cols.call_number))
     # Aggregate tolerated-junk counters. Per-item detail is logged at DEBUG
-    # (it repeats identically every run — noise at INFO); the counts roll up
+    # (it repeats identically every run, noise at INFO); the counts roll up
     # into the single summary line so the signal survives at normal verbosity.
     bad_isbn_len = 0
     checksum_warn = 0
@@ -167,20 +167,20 @@ def load_catalog(path: str | Path, cfg: CatalogConfig) -> ExistingCatalog:
                 if len(norm) == 10 and not is_valid_isbn10(norm):
                     checksum_warn += 1
                     logger.debug(
-                        "resource %s: ISBN-10 %r fails checksum — canonicalizing anyway",
+                        "resource %s: ISBN-10 %r fails checksum, canonicalizing anyway",
                         resource_id, norm,
                     )
                 if len(norm) == 13 and not is_valid_isbn13(norm):
                     checksum_warn += 1
                     logger.debug(
-                        "resource %s: ISBN-13 %r fails checksum — indexing anyway",
+                        "resource %s: ISBN-13 %r fails checksum, indexing anyway",
                         resource_id, norm,
                     )
                 try:
                     canonical.add(canonical_isbn13(norm))
                 except ValueError:
                     # Junk that survived extraction (e.g. an 'X' in a non-final
-                    # position) — skip the value, keep the row. Never crash the
+                    # position), skip the value, keep the row. Never crash the
                     # loader on export junk.
                     uncanonicalizable += 1
                     logger.debug(

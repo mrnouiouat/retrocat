@@ -1,7 +1,7 @@
-"""Tests for language.py — MARC 008/35-37 language code normalization.
+"""Tests for language.py, MARC 008/35-37 language code normalization.
 
 Context: an early version of this pipeline stamped every record 'eng' because
-the 008 template hardcoded it — wrong for any collection with non-English
+the 008 template hardcoded it, wrong for any collection with non-English
 material, and silently wrong. These tests pin the normalization that fixes
 that; the corpus-wide default now lives in config, not here.
 """

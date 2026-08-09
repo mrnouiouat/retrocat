@@ -1,4 +1,4 @@
-"""Tests for reconcile.py — the informational MERGE_CANDIDATE diff report.
+"""Tests for reconcile.py, the informational MERGE_CANDIDATE diff report.
 
 One row per merge-candidate resource, diffing the export's call number
 against the resolved one. Report-only; nothing here writes back anywhere.
@@ -94,7 +94,7 @@ def test_unresolved_call_number_never_flags_fix():
 
 
 def test_no_call_number_column_is_stated_not_blank():
-    """An export with no call-number column configured must say so per row —
+    """An export with no call-number column configured must say so per row ,
     a blank cell would read as 'the catalog has no call number', which is a
     different claim."""
     rows = build_reconcile([merge_book()], {ISBN: meta()},

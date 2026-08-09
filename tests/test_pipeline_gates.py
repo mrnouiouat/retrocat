@@ -1,7 +1,7 @@
 """Tests for pipeline.py's two write-blocking gates.
 
-Both gates enforce the same non-negotiable — "if reconciliation fails, the
-pipeline exits non-zero and writes no .mrc" — and cover the stale-file trap:
+Both gates enforce the same non-negotiable, "if reconciliation fails, the
+pipeline exits non-zero and writes no .mrc"and cover the stale-file trap:
 a blocked run must not leave a shippable-looking .mrc from an earlier clean
 run sitting at the path the operator expects.
 
@@ -141,7 +141,7 @@ class TestConflictGate:
         assert not (tmp_path / "out" / "test.mrc").exists()
 
     def test_blocked_run_still_writes_the_reports(self, tmp_path):
-        # The operator needs the master table to see WHY it blocked — the gate
+        # The operator needs the master table to see WHY it blocked, the gate
         # deliberately runs after the reports are written.
         scan = make_scan(tmp_path, [
             (ISBN_B, GOOD_BARCODE),
@@ -178,7 +178,7 @@ class TestConflictGate:
         )
         assert (tmp_path / "out" / "test.mrc").exists()
         assert result.counts["CONFLICT"] == 1
-        # The conflicted book is excluded from the MARC either way — only the
+        # The conflicted book is excluded from the MARC either way, only the
         # clean book is written.
         assert result.marc_records == 1
 
@@ -231,7 +231,7 @@ class TestConflictGate:
 class TestReconciliationGate:
     def test_gate_failure_raises_and_writes_no_marc(self, tmp_path, monkeypatch):
         # Force the invariant to break: drop a book from the classification so
-        # bucketed != scanned. There is no input that does this legitimately —
+        # bucketed != scanned. There is no input that does this legitimately ,
         # that is the point of the gate, it catches a bug in our own code.
         import retrocat.pipeline as pipeline_mod
 

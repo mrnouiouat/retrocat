@@ -1,7 +1,7 @@
 """Manual worklist: the round-trip for books whose ISBN resolved nothing online.
 
 A book lands in the MANUAL bucket for one of two reasons (see classify.py):
-  * a lone barcode — no ISBN was ever scanned; or
+  * a lone barcode, no ISBN was ever scanned; or
   * an ISBN was scanned but no source (Google/OpenLibrary/LoC) returned a title.
 
 Either way the physical book still has a title/author a human can read off the
@@ -12,7 +12,7 @@ shelf*, and the final build ingests the filled rows and mints MARC records for
 them (tagged ``source="manual"``) straight into the combined file.
 
 **Why the worklist does NOT live under output/.** output/ is defined as
-regenerable — clearing it must never destroy real work. A filled worklist is
+regenerable, clearing it must never destroy real work. A filled worklist is
 irreplaceable hand-entered data, so it lives in a top-level, version-trackable
 ``manual/`` directory, one CSV per shelf. Re-running a shelf *merges* into any
 existing worklist (see ``write_worklist``) so a re-scan never clobbers rows
@@ -38,7 +38,7 @@ WORKLIST_HEADER = [
     "shelf", "barcode", "isbn", "title", "author", "call_number", "language",
     "notes",
 ]
-# Columns the operator fills by hand — merged/preserved across re-runs. The
+# Columns the operator fills by hand, merged/preserved across re-runs. The
 # pipeline owns shelf/barcode/isbn; the human owns these.
 _OPERATOR_COLUMNS = ("title", "author", "call_number", "language", "notes")
 
@@ -56,14 +56,14 @@ class ManualEntry:
     call_number: str = ""
     # Free-form: "Arabic", "ar", and "ara" all resolve (see language.py).
     # Blank falls back to the configured default language. Books that reach
-    # the worklist skew non-English — they are exactly the ones the ISBN APIs
+    # the worklist skew non-English, they are exactly the ones the ISBN APIs
     # do not index.
     language: str = ""
     notes: str = ""
 
     @property
     def filled(self) -> bool:
-        """A row is usable once a human has supplied a title — never fabricate."""
+        """A row is usable once a human has supplied a title, never fabricate."""
         return bool(self.title.strip())
 
 
@@ -135,7 +135,7 @@ def manual_metadata(entry: ManualEntry, default_lc_class: str) -> BookMetadata:
 
     Uses the operator's call number verbatim when given; otherwise generates a
     shelf-able LC-shaped number locally (``default_lc_class`` + Cutter from the
-    main entry + any year visible in the notes) — never blank, never a network
+    main entry + any year visible in the notes), never blank, never a network
     call. Always tagged source="manual", confidence="low": the title/author are
     exact (a human read them off the book) but the subject class is a default
     guess.
@@ -171,7 +171,7 @@ def build_manual_groups(
     Same rule as the main path: group by canonical ISBN-13 when present (two
     copies of one titled book -> one resource, two copies); a lone-barcode book
     with no ISBN is its own single-copy resource keyed by barcode. Unfilled
-    rows are skipped — they stay in the MANUAL bucket for a human to finish.
+    rows are skipped, they stay in the MANUAL bucket for a human to finish.
     """
     groups: dict[str, ResourceGroup] = {}
     order: list[str] = []

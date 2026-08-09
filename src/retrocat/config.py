@@ -7,7 +7,7 @@ Design rules:
   collides with ISBN classification, or an unknown key (probable typo) all
   abort before any file is read. A config typo that silently reverts to a
   default is the same failure class as a renamed export column silently
-  disabling dedup — the whole point of this layer is that misconfiguration
+  disabling dedup, the whole point of this layer is that misconfiguration
   is loud.
 * **The barcode range check is optional.** A library with no sticker-number
   scheme leaves `valid_new_ranges` empty and the new-barcode collision check
@@ -24,7 +24,7 @@ DEFAULT_CONFIG_FILENAME = "config.toml"
 
 
 class ConfigError(Exception):
-    """Bad or missing configuration — always fatal at startup."""
+    """Bad or missing configuration, always fatal at startup."""
 
 
 @dataclass(frozen=True)
@@ -52,7 +52,7 @@ class BarcodeConfig:
     def is_valid_new_barcode(self, barcode: str) -> bool:
         """True if a barcode is a legitimate number for a NEW sticker.
 
-        With no configured ranges the check is off and everything passes —
+        With no configured ranges the check is off and everything passes ,
         collision with *existing* catalog barcodes is checked separately in
         classify.py and does not depend on this.
         """
@@ -84,7 +84,7 @@ class CatalogColumns:
     barcode: str = "Barcode"    # required non-empty
     title: str = "Title"
     author: str = "Author"
-    call_number: str = "Call Number"  # may be "" — reconcile reports that fact
+    call_number: str = "Call Number"  # may be ""reconcile reports that fact
     resource_id: str = ""       # optional, used in log/report context only
     type: str = ""              # optional; "" disables the resource-type filter
 
@@ -123,7 +123,7 @@ def _check_unknown_keys(
 ) -> None:
     for key in given:
         if key not in allowed:
-            problems.append(f"unknown key {key!r} in [{where}] — typo?")
+            problems.append(f"unknown key {key!r} in [{where}], typo?")
 
 
 def _field_names(cls) -> set[str]:
@@ -135,7 +135,7 @@ def load_config(path: str | Path) -> Config:
     path = Path(path)
     if not path.exists():
         raise ConfigError(
-            f"config file not found: {path} — copy sample/config.toml next to "
+            f"config file not found: {path}. Copy sample/config.toml next to "
             "your data and edit it, then pass --config if it is not at ./"
             f"{DEFAULT_CONFIG_FILENAME}"
         )
@@ -221,7 +221,7 @@ def validate_config(config: Config) -> list[str]:
 
     if not config.library.home_library.strip():
         problems.append(
-            "[library].home_library is required — records must carry your "
+            "[library].home_library is required: records must carry your "
             "library's real name, not a placeholder"
         )
     if len(config.library.marc_language) != 3:
@@ -234,7 +234,7 @@ def validate_config(config: Config) -> list[str]:
     if b.length in (10, 13):
         problems.append(
             f"[barcodes].length = {b.length} collides with ISBN token "
-            "classification (ISBNs are 10 or 13 digits) — scan lines would "
+            "classification (ISBNs are 10 or 13 digits); scan lines would "
             "be ambiguous"
         )
     elif b.length < 1:
@@ -245,12 +245,12 @@ def validate_config(config: Config) -> list[str]:
     cols = config.catalog.columns
     if not cols.isbn.strip():
         problems.append(
-            "[catalog.columns].isbn is required — dedup against the export "
+            "[catalog.columns].isbn is required: dedup against the export "
             "is impossible without it"
         )
     if not cols.barcode.strip():
         problems.append(
-            "[catalog.columns].barcode is required — ALREADY_DONE/CONFLICT "
+            "[catalog.columns].barcode is required: ALREADY_DONE/CONFLICT "
             "detection is impossible without it"
         )
 

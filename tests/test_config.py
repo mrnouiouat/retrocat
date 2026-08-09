@@ -1,4 +1,4 @@
-"""Tests for config.py — loading, validation, and the barcode-range helpers."""
+"""Tests for config.py, loading, validation, and the barcode-range helpers."""
 
 import pytest
 
@@ -148,7 +148,7 @@ marc_language = "en"
 """))
 
     def test_sample_config_is_valid(self):
-        # The shipped sample must always load cleanly — it is the documented
+        # The shipped sample must always load cleanly, it is the documented
         # starting point for every new library.
         from pathlib import Path
         sample = Path(__file__).resolve().parent.parent / "sample" / "config.toml"

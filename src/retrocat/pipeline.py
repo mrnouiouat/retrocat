@@ -58,7 +58,7 @@ def _parse_any(scans: str | Path, config: Config):
 
 
 class PipelineError(Exception):
-    """Fatal pipeline failure — the run must exit non-zero with no .mrc."""
+    """Fatal pipeline failure: the run must exit non-zero with no .mrc."""
 
 
 @dataclass
@@ -89,7 +89,7 @@ def _lookup_metadata(
             if i % 50 == 0:
                 logger.info("lookup progress: %d/%d", i, len(isbns))
     finally:
-        # Flush even on a mid-run crash/interrupt — at multi-thousand-book
+        # Flush even on a mid-run crash/interrupt, at multi-thousand-book
         # scale an unflushed tail is dozens of lookups re-fetched for nothing.
         client.flush_cache()
     return metadata
@@ -107,7 +107,7 @@ def _demote_untitled(
             book.action = Action.MANUAL
             book.note = (
                 f"no title resolved from any source for ISBN "
-                f"{book.canonical_isbn} — look up manually by physical inspection"
+                f"{book.canonical_isbn}; look up manually by physical inspection"
             )
 
 
@@ -123,7 +123,7 @@ def _flag_call_number_quality(
     - source == 'default' -> the subject class is a pure last-resort default (no
       category/subject matched), the weakest guess -> "verify shelving".
 
-    Category-inferred class_fallback rows are not noted here — they carry a
+    Category-inferred class_fallback rows are not noted here, they carry a
     plausible class and are already marked confidence=low for spot-check."""
     for book in classification.books:
         if book.action not in (Action.CREATE, Action.MERGE_CANDIDATE):
@@ -133,9 +133,9 @@ def _flag_call_number_quality(
             continue
         flag = None
         if not meta.call_number:
-            flag = "no call number resolved — assign manually"
+            flag = "no call number resolved, assign manually"
         elif meta.call_number_source == "default":
-            flag = "subject class defaulted (no category matched) — verify shelving"
+            flag = "subject class defaulted (no category matched), verify shelving"
         if flag:
             book.note = f"{book.note} | {flag}" if book.note else flag
 
@@ -150,7 +150,7 @@ def _build_review_digest(
     The point: at backfill scale nobody re-reads the whole master table; they
     read this digest and jump straight to the flagged rows. Manual books that
     have already been resolved via a filled worklist (``resolved_manual``) are
-    NOT flagged — they are handled and ride in the MARC file.
+    NOT flagged, they are handled and ride in the MARC file.
     """
     resolved_manual = resolved_manual or set()
     digest: dict[str, list[str]] = {
@@ -184,14 +184,14 @@ def _discard_stale_marc(mrc_path: Path) -> None:
 
     Without this, a blocked run leaves a plausible-looking file sitting at the
     exact path the operator expects, with a timestamp from whenever the last
-    clean run happened — and the failure mode is shipping it. output/ is
+    clean run happened, and the failure mode is shipping it. output/ is
     regenerable by definition, so removing it costs nothing and closes the
     trap; the hand-entered manual/ worklists are never touched.
     """
     if mrc_path.exists():
         mrc_path.unlink()
         logger.warning(
-            "removed stale MARC file %s — this run is not writing one", mrc_path
+            "removed stale MARC file %s, this run is not writing one", mrc_path
         )
 
 
@@ -204,7 +204,7 @@ def _reconciliation_gate(
         _discard_stale_marc(mrc_path)
         raise PipelineError(
             f"reconciliation gate FAILED: {scanned_total} books scanned but "
-            f"{bucketed} bucketed ({counts}) — refusing to write any MARC output"
+            f"{bucketed} bucketed ({counts}), refusing to write any MARC output"
         )
     logger.info(
         "reconciliation gate passed: %d scanned = %s", scanned_total, counts
@@ -217,7 +217,7 @@ def _conflict_gate(
     """Refuse to write MARC while any book is in the CONFLICT bucket.
 
     A CONFLICT means the scan disagrees with the catalog about which book a
-    barcode belongs to — a mispaired scan, or a sticker physically applied to
+    barcode belongs to, a mispaired scan, or a sticker physically applied to
     the wrong book. The book itself is already excluded from the MARC file, but
     an unresolved conflict means the *rest* of the file is built on a scan
     stream known to contain at least one bad pairing, and it should not reach a
@@ -228,7 +228,7 @@ def _conflict_gate(
         return
     if allow_conflicts:
         logger.warning(
-            "%d CONFLICT book(s) present but --allow-conflicts was given — "
+            "%d CONFLICT book(s) present but --allow-conflicts was given, "
             "writing MARC anyway; conflicted books are still excluded",
             len(conflicts),
         )
@@ -238,7 +238,7 @@ def _conflict_gate(
     more = f" (+{len(conflicts) - 5} more)" if len(conflicts) > 5 else ""
     raise PipelineError(
         f"conflict gate FAILED: {len(conflicts)} book(s) in the CONFLICT "
-        f"bucket — refusing to write MARC. Resolve them (see master_table.csv) "
+        f"bucket, refusing to write MARC. Resolve them (see master_table.csv) "
         f"or re-run with --allow-conflicts to ship without them. [{shown}{more}]"
     )
 
@@ -252,7 +252,7 @@ def _write_master_table(
 ) -> None:
     """One row per scanned book, sorted by action then barcode for easy review.
 
-    A first ``shelf`` column ties each book to its scan file — essential in the
+    A first ``shelf`` column ties each book to its scan file, essential in the
     combined final table where books from every shelf are interleaved. Manual
     books resolved from a filled worklist (``manual_by_barcode``) render the
     hand-entered title/author/call number with source ``manual``.
@@ -263,8 +263,8 @@ def _write_master_table(
         entry = manual_by_barcode.get(book.barcode)
         if entry is not None and entry.filled:
             meta = manual_metadata(entry, default_lc_class)
-            note = (f"{book.note} | entered manually — shipped in MARC"
-                    if book.note else "entered manually — shipped in MARC")
+            note = (f"{book.note} | entered manually, shipped in MARC"
+                    if book.note else "entered manually, shipped in MARC")
         else:
             meta = metadata.get(book.canonical_isbn or "")
             note = book.note
@@ -280,7 +280,7 @@ def _write_master_table(
             meta.confidence if meta and meta.confidence else "",
             note,
         ])
-    # utf-8-sig: the BOM makes Excel on Windows render diacritics correctly —
+    # utf-8-sig: the BOM makes Excel on Windows render diacritics correctly ,
     # this file exists to be eyeballed by a human, usually in Excel.
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
@@ -297,14 +297,14 @@ def _write_manual_worklist(
 ) -> None:
     """Emit the fill-in worklist for every MANUAL book (merge-preserving).
 
-    Pre-fills what the pipeline knows — shelf, barcode, ISBN (blank for a
-    lone-barcode book), and the classification hint in ``notes`` — leaving
+    Pre-fills what the pipeline knows, shelf, barcode, ISBN (blank for a
+    lone-barcode book), and the classification hint in ``notes``, leaving
     title/author for the operator to complete at the shelf. See manual.py for
     why this lives outside the regenerable output/ tree and how re-runs preserve
     already-entered rows.
 
     ``resolved`` barcodes (already handled via a filled worklist entry this
-    run) are excluded — the final build's leftover report must list only the
+    run) are excluded, the final build's leftover report must list only the
     books that still need a human, not re-list handled ones as blank rows.
     """
     entries = [
@@ -347,7 +347,7 @@ def run_pipeline(
     this run is minted into the MARC file as a ``source="manual"`` record.
 
     ``allow_conflicts`` ships the MARC file even when books landed in the
-    CONFLICT bucket. The default refuses — see ``_conflict_gate``.
+    CONFLICT bucket. The default refuses, see ``_conflict_gate``.
     """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -380,7 +380,7 @@ def run_pipeline(
         if entry.barcode not in manual_barcodes:
             logger.warning(
                 "manual worklist row for barcode %s has no matching MANUAL book "
-                "in this run — skipping", entry.barcode,
+                "in this run, skipping", entry.barcode,
             )
             continue
         manual_by_barcode[entry.barcode] = entry

@@ -1,4 +1,4 @@
-"""Tests for lc_call.py — the local LC Cutter / call-number generator.
+"""Tests for lc_call.py, the local LC Cutter / call-number generator.
 
 The Cutter table is verified against LC Shelflisting Manual G 63. The anchor
 case is real: cutter("Wills") == "W55" reproduces the authoritative LC number
@@ -18,7 +18,7 @@ from retrocat.lc_call import (
 
 
 # --------------------------------------------------------------------------
-# Cutter algorithm — one case per initial-letter table, worked by hand
+# Cutter algorithm, one case per initial-letter table, worked by hand
 # --------------------------------------------------------------------------
 
 @pytest.mark.parametrize("word, expected", [
@@ -66,7 +66,7 @@ def test_main_entry_personal_author_uses_surname():
 
 
 def test_main_entry_first_of_multiple_authors():
-    # Google joins authors with ", " — cutter on the FIRST author's surname.
+    # Google joins authors with ", "cutter on the FIRST author's surname.
     assert main_entry_word(
         "Camillia Fawzi El-Solh, Judy Mabro", None, corporate=False
     ) == "El-Solh"

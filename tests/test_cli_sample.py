@@ -25,7 +25,7 @@ from retrocat.lookup import BookMetadata
 
 SAMPLE = Path(__file__).resolve().parent.parent / "sample"
 
-# What the stubbed lookup "resolves" — titles for every ISBN the sample scans
+# What the stubbed lookup "resolves"titles for every ISBN the sample scans
 # contain, so classification is deterministic without HTTP.
 TITLES = {
     "9781565645998": "Abu Zayd al-Balkhi's Sustenance of the Soul",
@@ -42,7 +42,7 @@ TITLES = {
 
 
 class StubLookupClient:
-    """Replaces LookupClient in pipeline.py — accepts its constructor kwargs,
+    """Replaces LookupClient in pipeline.py, accepts its constructor kwargs,
     resolves titles from the table above, no HTTP, no cache file."""
 
     def __init__(self, cache_path=None, class_map=None, **kwargs) -> None:
@@ -111,7 +111,7 @@ def test_shelf_run_buckets_and_worklist(workspace):
         counts[r["action"]] = counts.get(r["action"], 0) + 1
     # shelf-a exercises every non-CONFLICT bucket:
     #   500001 re-scan of an existing barcode (ISBN-10 in export, ISBN-13
-    #   scanned — canonical agreement) -> ALREADY_DONE
+    #   scanned, canonical agreement) -> ALREADY_DONE
     #   500101 known ISBN on a new barcode -> MERGE_CANDIDATE
     #   500110+500111 same ISBN twice -> two CREATE rows, one MARC resource
     #   500115 lone barcode -> MANUAL

@@ -1,4 +1,4 @@
-"""Tests for lookup.py — all HTTP mocked via an injected fake session.
+"""Tests for lookup.py, all HTTP mocked via an injected fake session.
 
 Covers: source fallback order,
 class-level fallback, nothing-resolves path, 429 backoff, ISBN-10 retry,
@@ -35,7 +35,7 @@ ISBN_MERGE_10 = "1565645995"
 
 
 # --------------------------------------------------------------------------
-# Fake HTTP plumbing — LookupClient only calls session.get(url, params=, timeout=)
+# Fake HTTP plumbing, LookupClient only calls session.get(url, params=, timeout=)
 # --------------------------------------------------------------------------
 
 class FakeResponse:
@@ -191,7 +191,7 @@ def test_loc_call_number_and_lccn(tmp_path):
 
 def test_openlibrary_skips_leading_blank_lc_classification(tmp_path):
     """OpenLibrary sometimes returns a blank entry ahead of the real call
-    number (real data, e.g. isbn 9780618219087) — must not take index 0
+    number (real data, e.g. isbn 9780618219087), must not take index 0
     blindly and report a blank string as a high-confidence hit."""
     client, _ = make_client(tmp_path, {
         "googleapis": google_miss(),
@@ -212,7 +212,7 @@ def test_openlibrary_all_blank_lc_classifications_is_a_miss(tmp_path):
     """If every entry in the list is blank, it must NOT be reported as an empty
     high-confidence openlibrary hit. With a title present and no mappable
     category/subject, the book falls through to the local default class rather
-    than shipping a blank — but crucially the source is 'default', proving the
+    than shipping a blank, but crucially the source is 'default', proving the
     blank OL classification was not consumed."""
     client, _ = make_client(tmp_path, {
         "googleapis": google_miss(),
@@ -296,7 +296,7 @@ def test_class_fallback_more_specific_keyword_wins(tmp_path):
 
 def test_class_fallback_uses_openlibrary_subjects_when_google_unmappable(tmp_path):
     """Google mis-tags (e.g. 'Juvenile Fiction' on a lynching memoir) leave
-    categories unmappable — OpenLibrary's curated subject headings, already in
+    categories unmappable, OpenLibrary's curated subject headings, already in
     the cached payload, must be tried as a second signal."""
     client, _ = make_client(tmp_path, {
         "googleapis": google_hit(
@@ -329,7 +329,7 @@ def test_class_fallback_tolerates_plain_string_subjects():
 
 def test_default_class_when_nothing_maps_never_blank(tmp_path):
     """A titled book whose ONLY signal is a deliberately-unmapped category
-    ('Juvenile Fiction') and no OL subjects still leaves with a call number —
+    ('Juvenile Fiction') and no OL subjects still leaves with a call number ,
     the last-resort default class enriched with a local Cutter + year. This
     is the A Time of Terror case (9780933121447): online lookup found a title
     and author but no subject, and previously it shipped blank."""
@@ -351,7 +351,7 @@ def test_default_class_when_nothing_maps_never_blank(tmp_path):
 
 
 def test_default_class_only_applies_when_no_category_matches(tmp_path):
-    """The default must NOT pre-empt a real category match — a mappable
+    """The default must NOT pre-empt a real category match, a mappable
     category still wins and is tagged class_fallback, not default."""
     client, _ = make_client(tmp_path, {
         "googleapis": google_hit(title="Introducing Islam", categories=["Islam"]),
@@ -456,14 +456,14 @@ def test_openlibrary_retries_on_503_then_succeeds(tmp_path):
     # the 0.2s inter-source politeness sleeps).
     backoff = [s for s in sleeps if s in GOOGLE_429_DELAYS]
     assert backoff[:2] == list(GOOGLE_429_DELAYS[:2])
-    # A recovered transient is a clean result — it gets cached normally.
+    # A recovered transient is a clean result, it gets cached normally.
     client.flush_cache()
     cached = json.loads((tmp_path / "lookup_cache.json").read_text(encoding="utf-8"))
     assert ISBN in cached
 
 
 def test_unrecovered_transient_error_is_not_cached(tmp_path):
-    """If 503s never clear, the ISBN must NOT be cached — a re-run re-fetches
+    """If 503s never clear, the ISBN must NOT be cached, a re-run re-fetches
     it rather than locking in a blank call number."""
     routes = {
         "googleapis": google_hit(title="Flaky Source Book"),
@@ -485,7 +485,7 @@ def test_unrecovered_transient_error_is_not_cached(tmp_path):
 
 
 def test_google_retries_on_503(tmp_path):
-    """Google's backend 503s sporadically (observed live) — retry, don't
+    """Google's backend 503s sporadically (observed live), retry, don't
     immediately fall through to a miss."""
     state = {"n": 0}
 
@@ -599,7 +599,7 @@ def test_cache_prevents_repeat_http_and_persists(tmp_path):
 
 def test_loc_unreachable_degrades_after_threshold_not_first_blip(tmp_path):
     """Known issue: LoC SRU is unreachable from some networks. The run must
-    continue without it — but ONE mid-run blip must not kill the source for
+    continue without it, but ONE mid-run blip must not kill the source for
     the rest of a long run. LoC is disabled only after
     LOC_MAX_CONSECUTIVE_FAILURES consecutive connection failures."""
     from retrocat.lookup import LOC_MAX_CONSECUTIVE_FAILURES
@@ -655,7 +655,7 @@ def test_is_corporate_author():
 # --------------------------------------------------------------------------
 # Language resolution (MARC 008/35-37)
 # --------------------------------------------------------------------------
-# Until this landed, every record was stamped 'eng' regardless of source —
+# Until this landed, every record was stamped 'eng' regardless of source ,
 # wrong for any collection with non-English material.
 
 LOC_MARCXML_ARABIC = """<?xml version="1.0" encoding="UTF-8"?>
@@ -691,7 +691,7 @@ def test_google_language_region_subtag_is_dropped(tmp_path):
 
 
 def test_loc_008_language_wins_over_google(tmp_path):
-    """LoC's 008 is a cataloged MARC code — more authoritative than Google's
+    """LoC's 008 is a cataloged MARC code, more authoritative than Google's
     ISO 639-1 guess, so it is read first."""
     client, _ = make_client(tmp_path, {
         "googleapis": google_hit(title="Al-Kitab", language="en"),

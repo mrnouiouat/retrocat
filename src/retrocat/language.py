@@ -4,7 +4,7 @@ Sources report language in different vocabularies: Google Books returns
 BCP-47 / ISO 639-1 (``en``, ``ar``, sometimes ``en-US``), while a LoC MARCXML
 record already carries a MARC code in its own 008. MARC uses the ISO 639-2/B
 ("bibliographic") variants, which differ from the 639-2/T ("terminological")
-ones for ~20 languages — ``per`` not ``fas``, ``ger`` not ``deu``, ``fre`` not
+ones for ~20 languages, ``per`` not ``fas``, ``ger`` not ``deu``, ``fre`` not
 ``fra``. Getting that wrong is silent: the record still imports, it is just
 filed under a language that does not exist in the MARC code list.
 
@@ -80,7 +80,7 @@ def marc_language(code: str | None) -> str | None:
     """Normalize a source-reported language value to a MARC 008/35-37 code.
 
     Accepts ISO 639-1 (``ar``), BCP-47 with a region or script subtag
-    (``en-US``, ``zh-Hant`` — the subtag is dropped, MARC has no room for it),
+    (``en-US``, ``zh-Hant``, the subtag is dropped, MARC has no room for it),
     3-letter codes already in MARC or ISO 639-2/T form, and plain English
     language names (for hand-filled worklist rows). Returns None for anything
     unrecognized or signal-free, so the caller falls through to the next source

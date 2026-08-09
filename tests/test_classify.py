@@ -1,7 +1,7 @@
-"""Tests for classify.py — every bucket.
+"""Tests for classify.py, every bucket.
 
 The catalog fixture deliberately stores its ISBN in the ISBN-10 form ONLY,
-because real exports skew ISBN-10 while scanner reads are ISBN-13 EAN codes —
+because real exports skew ISBN-10 while scanner reads are ISBN-13 EAN codes ,
 all bucket decisions must go through canonical ISBN-13 comparison.
 """
 
@@ -88,7 +88,7 @@ class TestMergeCandidate:
 class TestAlreadyDone:
     def test_barcode_on_record_isbn_agrees_canonically(self, catalog):
         # Catalog stores the ISBN-10 form; the scan is the ISBN-13 of the
-        # same book — canonically they agree, so this is ALREADY_DONE.
+        # same book, canonically they agree, so this is ALREADY_DONE.
         c = classify_one(pair(KNOWN_ISBN13, "500001"), catalog)
         assert c.action == Action.ALREADY_DONE
         assert "agrees" in c.note

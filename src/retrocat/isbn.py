@@ -3,7 +3,7 @@
 Canonical form throughout the pipeline is ISBN-13 (see docs/DESIGN.md, "ISBN
 canonicalization"). Catalog exports are frequently ISBN-10-heavy while
 barcode-scanner reads are ~100% ISBN-13 EANs, so every comparison must go
-through :func:`canonical_isbn13` — raw string comparison silently misses real
+through :func:`canonical_isbn13`, raw string comparison silently misses real
 duplicates while all the totals still balance.
 """
 
@@ -18,7 +18,7 @@ _ISBN_TOKEN_RE = re.compile(r"\d[\dXx-]{8,15}[\dXx]")
 
 
 def normalize(code: str) -> str:
-    """Strip everything but digits/X and uppercase — the raw comparable form."""
+    """Strip everything but digits/X and uppercase, the raw comparable form."""
     return re.sub(r"[^0-9Xx]", "", code).upper()
 
 
@@ -56,14 +56,14 @@ def is_valid_isbn13(isbn: str) -> bool:
 def isbn10_to_13(isbn10: str) -> str:
     """Convert ISBN-10 -> ISBN-13: prepend 978, recompute the check digit.
 
-    Conversion is applied even when the ISBN-10 check digit is wrong — the
+    Conversion is applied even when the ISBN-10 check digit is wrong, the
     recomputed EAN check digit rescues check-digit-only typos in the export.
     """
     isbn10 = normalize(isbn10)
     if len(isbn10) != 10:
         raise ValueError(f"not an ISBN-10: {isbn10!r}")
     if not isbn10[:9].isdigit():
-        # e.g. export junk with an 'X' in a non-final position — reject
+        # e.g. export junk with an 'X' in a non-final position, reject
         # cleanly so callers can log-and-skip instead of crashing on int().
         raise ValueError(f"ISBN-10 core is not numeric: {isbn10!r}")
     core = "978" + isbn10[:9]
@@ -96,7 +96,7 @@ def extract_isbns(field_value: str) -> tuple[list[str], list[str]]:
 
     Returns (valid_normalized, rejected_tokens): tokens that normalize to
     length 10 or 13 vs. everything else ISBN-shaped (wrong length after
-    stripping hyphens — logged and skipped by the caller).
+    stripping hyphens, logged and skipped by the caller).
     """
     valid: list[str] = []
     rejected: list[str] = []

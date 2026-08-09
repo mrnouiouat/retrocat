@@ -1,6 +1,6 @@
-"""Tests for catalog.py — export loading, junk tolerance, header validation.
+"""Tests for catalog.py, export loading, junk tolerance, header validation.
 
-Uses small synthetic CSVs written to tmp_path — never a real export (keeps
+Uses small synthetic CSVs written to tmp_path, never a real export (keeps
 the suite fast and hermetic).
 """
 
@@ -54,7 +54,7 @@ class TestLoadCatalog:
 
     def test_invalid_length_isbn_skipped_row_kept(self, tmp_path):
         # Real junk observed in production exports: an ISSN-ish value.
-        # Log-and-skip the value, keep the row — never raise.
+        # Log-and-skip the value, keep the row, never raise.
         cat = make_catalog(tmp_path, [
             '3,Junk ISBN,Author,Pub,2002,Book,Anytown,"BP 2",500002,977-5224-9-8',
         ])
@@ -67,7 +67,7 @@ class TestLoadCatalog:
 
     def test_misplaced_x_isbn_value_skipped_loader_survives(self, tmp_path):
         # A 10-char token with 'X' mid-string passes extraction but cannot be
-        # canonicalized — the loader must log-and-skip it, never crash, and
+        # canonicalized, the loader must log-and-skip it, never crash, and
         # stored_forms must not see it either.
         cat = make_catalog(tmp_path, [
             '9,X Junk,Author,Pub,2002,Book,Anytown,"BP 9",500009,'
@@ -109,7 +109,7 @@ class TestLoadCatalog:
         assert "500010" in cat.barcode_to_isbns
 
     def test_type_filter_off_ingests_everything(self, tmp_path):
-        # With no type column configured, every row is ingested — the export
+        # With no type column configured, every row is ingested, the export
         # is declared to contain only books.
         cfg = CatalogConfig(columns=CatalogColumns(
             isbn="ISBN", barcode="Barcode", title="Title", author="Author",

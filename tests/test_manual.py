@@ -55,7 +55,7 @@ def test_rewrite_preserves_operator_entered_values(tmp_path):
     write_worklist(rows, path)
 
     # A later re-scan of the shelf regenerates the SAME barcode with blank
-    # operator columns — the merge must keep the human's values.
+    # operator columns, the merge must keep the human's values.
     write_worklist([ManualEntry("shelf-1a", "500300", notes="hint")], path)
     after = read_worklist(path)
     assert after[0].title == "The Sealed Nectar"
@@ -143,8 +143,8 @@ def test_same_isbn_groups_into_one_resource_two_copies():
 # --------------------------------------------------------------------------
 # Operator-supplied language (MARC 008/35-37)
 # --------------------------------------------------------------------------
-# Books reaching the worklist skew non-English — they are exactly the ones the
-# ISBN APIs do not index — so the operator can name the language at the shelf.
+# Books reaching the worklist skew non-English, they are exactly the ones the
+# ISBN APIs do not index, so the operator can name the language at the shelf.
 
 def test_worklist_round_trips_the_language_column(tmp_path):
     path = tmp_path / "shelf-x.csv"

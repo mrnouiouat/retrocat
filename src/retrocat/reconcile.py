@@ -1,6 +1,6 @@
 """Reconciliation report: MERGE_CANDIDATE call numbers vs the existing catalog.
 
-Informational only — there is no write-back path to any ILS. Nothing here
+Informational only, there is no write-back path to any ILS. Nothing here
 modifies the export; the report just makes call-number cleanup easy to review
 before (or after) import.
 """
@@ -19,7 +19,7 @@ from .lookup import BookMetadata
 logger = logging.getLogger(__name__)
 
 # Rendered into the existing_call_number column when the export has no
-# call-number column configured at all — an explicit statement beats a blank
+# call-number column configured at all, an explicit statement beats a blank
 # cell that reads as "the catalog has no call number for this book".
 NO_CALL_NUMBER_COLUMN = "(export has no call-number column)"
 
@@ -40,7 +40,7 @@ def build_reconcile(
 ) -> list[ReconcileRow]:
     if not catalog.has_call_numbers:
         logger.warning(
-            "the catalog export has no call-number column configured — the "
+            "the catalog export has no call-number column configured; the "
             "reconcile report cannot diff existing call numbers and will say "
             "so per row"
         )

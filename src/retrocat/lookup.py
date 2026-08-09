@@ -39,7 +39,7 @@ REQUEST_TIMEOUT = 15  # seconds
 INTER_CALL_SLEEP = 0.2  # politeness delay between calls per source
 GOOGLE_429_DELAYS = (1.0, 2.0, 4.0, 8.0)  # bounded exponential backoff
 # LoC is only disabled for the run after this many CONSECUTIVE connection
-# failures — one mid-run blip must not kill the best call-number source for
+# failures, one mid-run blip must not kill the best call-number source for
 # the rest of a multi-thousand-book run.
 LOC_MAX_CONSECUTIVE_FAILURES = 3
 # Statuses worth retrying: rate-limit (429) and transient server-side faults
@@ -51,14 +51,14 @@ _MARCXML_NS = {"m": "http://www.loc.gov/MARC21/slim"}
 
 
 def _marcxml_record_tags(xml_text: str) -> set[str]:
-    """Tags present in an SRU response — used to detect zero-record responses."""
+    """Tags present in an SRU response, used to detect zero-record responses."""
     try:
         return {elem.tag for elem in ET.fromstring(xml_text).iter()}
     except ET.ParseError:
         return set()
 
 # Corporate-author heuristic (MARC 110 vs 100), validated against real data
-# during the original deployment. Extend as more corporate bodies appear —
+# during the original deployment. Extend as more corporate bodies appear ,
 # "foundation" was added after a real "El-Falah Foundation" was mis-tagged as
 # a person and the Cutter landed on the shared word "Foundation" instead of
 # the distinctive name.
@@ -74,7 +74,7 @@ class ClassMap:
 
     Shipped as data/lc_class_map.toml (a collection-specific worked example);
     override with [lookup].class_map_file in config.toml. Order is meaningful
-    — the first keyword found in the subject text wins — and tomllib preserves
+   , the first keyword found in the subject text wins, and tomllib preserves
     document order, so the file is written narrowest-first.
     """
 
@@ -153,7 +153,7 @@ class BookMetadata:
 
     @property
     def resolved(self) -> bool:
-        """A record is usable only if a title resolved — never fabricate one."""
+        """A record is usable only if a title resolved, never fabricate one."""
         return bool(self.title)
 
 
@@ -177,7 +177,7 @@ class LookupClient:
         self._loc_available: bool | None = None  # None = not yet probed
         self._loc_consecutive_failures = 0
         # Set when a retryable failure (5xx/429/network) is NOT overcome within
-        # a lookup, so the result is not cached — a re-run re-fetches it rather
+        # a lookup, so the result is not cached, a re-run re-fetches it rather
         # than the transient blip poisoning a book's call number permanently.
         self._transient = False
         self._cache: dict[str, dict[str, Any]] = {}
@@ -186,7 +186,7 @@ class LookupClient:
                 self._cache = json.loads(self.cache_path.read_text(encoding="utf-8"))
                 logger.info("lookup cache loaded: %d ISBNs", len(self._cache))
             except (OSError, json.JSONDecodeError) as exc:
-                logger.warning("could not read lookup cache (%s) — starting fresh", exc)
+                logger.warning("could not read lookup cache (%s), starting fresh", exc)
 
     # ---------------------------------------------------------------- cache
 
@@ -223,13 +223,13 @@ class LookupClient:
                 delay = next(delays, None)
                 if delay is None:
                     logger.warning(
-                        "%s network error for %s: %s — retries exhausted",
+                        "%s network error for %s: %s, retries exhausted",
                         source, isbn, exc,
                     )
                     self._transient = True
                     return None
                 logger.info(
-                    "%s network error for %s — backing off %.1fs", source, isbn, delay
+                    "%s network error for %s, backing off %.1fs", source, isbn, delay
                 )
                 self.sleep(delay)
                 continue
@@ -249,7 +249,7 @@ class LookupClient:
                 if retry_after and retry_after.isdigit():
                     delay = max(delay, float(retry_after))
                 logger.info(
-                    "%s HTTP %d for %s — backing off %.1fs",
+                    "%s HTTP %d for %s, backing off %.1fs",
                     source, resp.status_code, isbn, delay,
                 )
                 self.sleep(delay)
@@ -310,7 +310,7 @@ class LookupClient:
             if self._loc_consecutive_failures >= LOC_MAX_CONSECUTIVE_FAILURES:
                 if self._loc_available is not False:
                     logger.warning(
-                        "LoC SRU unreachable %d times in a row (%s) — disabling "
+                        "LoC SRU unreachable %d times in a row (%s), disabling "
                         "it for the rest of this run (known issue: the endpoint "
                         "is blocked from some networks)",
                         self._loc_consecutive_failures, exc,
@@ -318,7 +318,7 @@ class LookupClient:
                 self._loc_available = False
             else:
                 logger.info(
-                    "LoC SRU connection failure %d/%d for %s — will try again",
+                    "LoC SRU connection failure %d/%d for %s, will try again",
                     self._loc_consecutive_failures,
                     LOC_MAX_CONSECUTIVE_FAILURES, isbn,
                 )
@@ -331,7 +331,7 @@ class LookupClient:
         if resp.status_code != 200:
             logger.warning("LoC SRU HTTP %d for %s", resp.status_code, isbn)
             return None
-        # A zero-record SRU response is still a 200 with a body — treat it as
+        # A zero-record SRU response is still a 200 with a body, treat it as
         # a miss (otherwise the ISBN-10 retry never fires).
         if f"{{{_MARCXML_NS['m']}}}record" not in _marcxml_record_tags(resp.text):
             return None
@@ -355,7 +355,7 @@ class LookupClient:
         the language code from the record's own 008/35-37 (041$a as backup).
 
         LoC's 008 already carries a MARC language code, so it needs no mapping
-        — it is the most authoritative language signal available and is read
+       , it is the most authoritative language signal available and is read
         ahead of Google's ISO 639-1 guess.
         """
         out: dict[str, str | None] = {
@@ -421,7 +421,7 @@ class LookupClient:
 
         # Call number: openlibrary (primary) -> loc -> class-level fallback.
         # OpenLibrary's lc_classifications list sometimes carries a blank
-        # entry ahead of the real one (e.g. ["", "BM535 .C37 2001"]) — skip
+        # entry ahead of the real one (e.g. ["", "BM535 .C37 2001"]), skip
         # blanks rather than trusting index 0.
         ol_lc = None
         if ol:
@@ -436,7 +436,7 @@ class LookupClient:
             meta.call_number_source = "loc"
             meta.confidence = "high"
         elif meta.title:
-            # Only titled books ship — an untitled book is demoted to MANUAL and
+            # Only titled books ship, an untitled book is demoted to MANUAL and
             # never reaches MARC, so only titled books need a generated number.
             # Inferred class from categories/subjects, else the last-resort
             # default so a shippable book never leaves blank (see the class
@@ -448,7 +448,7 @@ class LookupClient:
                 source = "default"
             # Turn the inferred (or default) class into a shelf-able LC-shaped
             # number by adding a local Cutter (from the main entry) and the
-            # year. No network — see lc_call.py. Still confidence=low: the
+            # year. No network, see lc_call.py. Still confidence=low: the
             # subject class is a guess even though the Cutter/year are exact.
             year = extract_year(
                 (google or {}).get("publishedDate"),
@@ -467,7 +467,7 @@ class LookupClient:
         # Language: loc (already a MARC code, cataloged) -> google (ISO 639-1,
         # mapped). Left None when neither reports one; marc_build then stamps
         # the configured default. Small-library collections are often not
-        # monolingual, so this is not a formality — see language.py.
+        # monolingual, so this is not a formality, see language.py.
         meta.language = loc["language"] or marc_language(
             (google or {}).get("language")
         )
@@ -501,7 +501,7 @@ class LookupClient:
                 isbn10 = isbn13_to_10(isbn13)
                 if isbn10:
                     logger.info(
-                        "all sources missed %s — retrying as ISBN-10 %s",
+                        "all sources missed %s, retrying as ISBN-10 %s",
                         isbn13, isbn10,
                     )
                     self._transient = False
@@ -520,7 +520,7 @@ class LookupClient:
                 # best-effort metadata but do NOT cache it, so a re-run
                 # re-fetches instead of locking in a transient miss.
                 logger.info(
-                    "not caching %s — unrecovered transient source error", isbn13
+                    "not caching %s, unrecovered transient source error", isbn13
                 )
                 return self._resolve(isbn13, entry)
             self._cache[isbn13] = entry

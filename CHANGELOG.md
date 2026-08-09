@@ -8,6 +8,19 @@ Design reasoning lives in [DECISIONS.md](DECISIONS.md), which explains *why*
 the pipeline works the way it does. This file only records what changed
 between releases.
 
+## [0.1.3] - 2026-08-09
+
+### Changed
+
+- Removed em dashes from every message the tool writes, including the seeded
+  `notes` text in `manual/<shelf>.csv` and `master_table.csv`. Those files are
+  opened in Excel by operators, and the note now reads "no ISBN scanned; look
+  up manually by physical inspection". A few validation errors that a comma
+  would have turned into run-on sentences were repunctuated rather than
+  mechanically converted. No behavior changed; the strings are wording only.
+- The README demo GIF was re-recorded against this build so the worklist it
+  shows matches what the tool now writes.
+
 ## [0.1.2] - 2026-08-09
 
 ### Fixed
@@ -71,6 +84,7 @@ First public release.
 - Configuration through `config.toml`, covering library identity, barcode
   scheme, catalog column mapping, and output filename.
 
+[0.1.3]: https://github.com/mrnouiouat/retrocat/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/mrnouiouat/retrocat/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/mrnouiouat/retrocat/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mrnouiouat/retrocat/releases/tag/v0.1.0

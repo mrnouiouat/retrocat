@@ -56,7 +56,7 @@ def test_corporate_heuristic_is_automatic(capsys):
 
 
 def test_corporate_flag_forces_org_treatment(capsys):
-    # 'Acme Publishing' has no org keyword — the flag forces first-word
+    # 'Acme Publishing' has no org keyword, the flag forces first-word
     # Cutter instead of surname ('Publishing').
     rc, out_forced = run(capsys, "--lc-class", "Z249", "--author",
                          "Acme Publishing", "--corporate")

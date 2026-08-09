@@ -56,7 +56,7 @@ class Classification:
 def _range_conflict_note(barcode: str, barcodes: BarcodeConfig) -> str:
     return (
         f"new barcode {barcode} outside the configured valid new-sticker "
-        f"range ({barcodes.describe_ranges()}) — investigate before import"
+        f"range ({barcodes.describe_ranges()}), investigate before import"
     )
 
 
@@ -68,29 +68,29 @@ def _classify_pair(
 
     if on_record is not None:
         # Barcode already in the export. ALREADY_DONE only if the scanned ISBN
-        # agrees with the record — a mismatch means a mispaired scan or a
+        # agrees with the record, a mismatch means a mispaired scan or a
         # sticker on the wrong book.
         if canon in on_record:
             return ClassifiedBook(
                 pair, Action.ALREADY_DONE, canon,
-                "barcode already in export; ISBN agrees — verify only",
+                "barcode already in export; ISBN agrees, verify only",
             )
         if not on_record:
             # Barcode is in the export but its record carries no usable ISBN
-            # (common in messy exports) — nothing to disagree with.
+            # (common in messy exports), nothing to disagree with.
             return ClassifiedBook(
                 pair, Action.ALREADY_DONE, canon,
-                "barcode already in export; record has no ISBN on file — "
+                "barcode already in export; record has no ISBN on file, "
                 "verify by title manually",
             )
         return ClassifiedBook(
             pair, Action.CONFLICT, canon,
             f"barcode {pair.barcode} is on record for ISBN(s) "
-            f"{', '.join(sorted(on_record))} but was scanned with {canon} — "
+            f"{', '.join(sorted(on_record))} but was scanned with {canon}, "
             "mispaired scan or sticker on the wrong book",
         )
 
-    # New barcode: collision-validation rule — a fresh sticker can only
+    # New barcode: collision-validation rule, a fresh sticker can only
     # legitimately carry a configured free-range number. With no configured
     # ranges the check is off and this never fires.
     if not barcodes.is_valid_new_barcode(pair.barcode):
@@ -101,7 +101,7 @@ def _classify_pair(
     if catalog.isbn_known(canon):
         return ClassifiedBook(
             pair, Action.MERGE_CANDIDATE, canon,
-            "ISBN already in export under a different barcode — rides along "
+            "ISBN already in export under a different barcode, rides along "
             "in MARC; the ILS-side merge tool consolidates post-import",
         )
     return ClassifiedBook(pair, Action.CREATE, canon, "")
@@ -113,7 +113,7 @@ def _classify_lone(
     if lone.barcode in catalog.barcode_to_isbns:
         return ClassifiedBook(
             lone, Action.ALREADY_DONE, None,
-            "barcode already in export (no ISBN scanned) — verify only",
+            "barcode already in export (no ISBN scanned), verify only",
         )
     if not barcodes.is_valid_new_barcode(lone.barcode):
         return ClassifiedBook(
@@ -121,7 +121,7 @@ def _classify_lone(
         )
     return ClassifiedBook(
         lone, Action.MANUAL, None,
-        "no ISBN scanned — look up manually by physical inspection",
+        "no ISBN scanned; look up manually by physical inspection",
     )
 
 

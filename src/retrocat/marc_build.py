@@ -3,7 +3,7 @@
 The field mapping was validated end-to-end during the original deployment: an
 ILS vendor's support team loaded a pilot file with this exact structure into
 their sandbox and confirmed correct resources and copies (see
-docs/VALIDATION.md). Do not redesign it casually — extend it.
+docs/VALIDATION.md). Do not redesign it casually, extend it.
 
 All library-identity values (home library string, shelving location, item
 status, default 008 language) come from ``LibraryConfig``; a blank location
@@ -31,7 +31,7 @@ LEADER = "00000nam a2200000 a 4500"
 
 
 class MarcValidationError(Exception):
-    """A generated record failed round-trip validation — a bug, not shippable."""
+    """A generated record failed round-trip validation: a bug, not shippable."""
 
 
 @dataclass
@@ -41,7 +41,7 @@ class ResourceGroup:
     canonical_isbn: str
     metadata: BookMetadata
     barcodes: list[str] = field(default_factory=list)
-    # Export-stored ISBN forms differing from the canonical scanned form —
+    # Export-stored ISBN forms differing from the canonical scanned form ,
     # each becomes an extra (repeatable) 020. Insurance in case the ILS-side
     # merge tool matches ISBNs literally rather than canonically; harmless
     # when the matching is already form-agnostic.
@@ -115,7 +115,7 @@ def build_record(
     if not meta.title:
         raise MarcValidationError(
             f"refusing to build a record without a title (ISBN {group.canonical_isbn}) "
-            "— untitled books are MANUAL, never placeholder CREATEs"
+            "untitled books are MANUAL, never placeholder CREATEs"
         )
     record = Record(leader=LEADER, to_unicode=True, force_utf8=True)
     record.add_field(
@@ -128,7 +128,7 @@ def build_record(
             Field(tag="010", indicators=Indicators(" ", " "),
                   subfields=[Subfield("a", meta.lccn)])
         )
-    # A manual no-ISBN book has an empty canonical_isbn — emit no 020 rather
+    # A manual no-ISBN book has an empty canonical_isbn, emit no 020 rather
     # than a blank subfield $a (an empty 020 is malformed, not "no ISBN").
     for isbn_form in [group.canonical_isbn, *group.extra_isbn_forms]:
         if not isbn_form:
@@ -146,7 +146,7 @@ def build_record(
             Field(tag=tag, indicators=ind, subfields=[Subfield("a", meta.author)])
         )
     # OpenLibrary sometimes returns a subtitle identical to the title
-    # (observed live) — don't emit "Title: Title".
+    # (observed live), don't emit "Title: Title".
     if meta.subtitle and meta.subtitle.strip().lower() != meta.title.strip().lower():
         title = f"{meta.title}: {meta.subtitle}"
     else:

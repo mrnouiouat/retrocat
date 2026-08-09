@@ -10,13 +10,13 @@ bare class into a fuller, distinct, correctly *shaped* LC call number by adding:
     title), using the standard Library of Congress Cutter table, and
   * the **year** of publication.
 
-The Cutter table is a deterministic offline algorithm — no network, no tokens.
+The Cutter table is a deterministic offline algorithm, no network, no tokens.
 Table verified 2026-07-06 against two independent transcriptions of the LC
 Classification and Shelflisting Manual G 63 (itsmarc.com "LC Cutter Table:
 Basic" and the Nebraska Library Commission), which agree exactly. Ground truth:
 ``cutter("Wills") == "W55"`` reproduces the real LC number ``BP130 .W55 2017``
 for ISBN 9781101981023 (Garry Wills, *What the Qur'an Meant*), which the live
-pilot resolved authoritatively — so the local path matches the real number.
+pilot resolved authoritatively, so the local path matches the real number.
 
 The subject *class* is still only inferred, so callers tag the result
 confidence=low for human spot-check. The Cutter/year are exact transforms of

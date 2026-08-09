@@ -1,4 +1,4 @@
-"""Tests for marc_build.py — sandbox-validated field mapping + extensions.
+"""Tests for marc_build.py, sandbox-validated field mapping + extensions.
 
 Every structural claim here mirrors docs/DESIGN.md "MARC generation": field
 set, indicators, subfield order, multi-copy grouping, dual 020s, round-trip
@@ -302,7 +302,7 @@ def test_008_falls_back_to_configured_default():
     from retrocat.marc_build import _field_008
 
     assert _field_008(BUILD_DATE, None, "eng") == EXPECTED_008
-    # The default comes from config, not a hardcoded constant — a library
+    # The default comes from config, not a hardcoded constant, a library
     # whose collection default is Arabic stamps 'ara' on unresolved books.
     assert _field_008(BUILD_DATE, None, "ara")[35:38] == "ara"
 
@@ -316,7 +316,7 @@ def test_record_default_language_comes_from_library_config():
 
 def test_008_rejects_a_non_three_character_language():
     # A malformed code would silently shift every position after 35 and corrupt
-    # the fixed-length field — fail loud instead.
+    # the fixed-length field, fail loud instead.
     from retrocat.marc_build import MarcValidationError, _field_008
 
     with pytest.raises(MarcValidationError, match="3-character MARC code"):
