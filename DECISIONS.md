@@ -230,9 +230,10 @@ record the owner reads instead of re-deriving the reasoning.
 
 ## Outstanding
 
-- **Push to origin.** Attempted at build end; if it required interactive
-  browser auth it may not have completed unattended — see the final session
-  report. `git push origin main` from `C:\Users\toile\Desktop\retrocat`
-  completes it; nothing else is pending.
 - **Backport candidate for the source repo**: the `unfilled_manual.csv` fix
-  (Phase 7 entry above).
+  (Phase 7 entry above) — the final build there lists already-resolved
+  manual books as blank rows in its leftover report.
+
+(The push to origin completed unattended on 2026-08-09 via cached Git
+Credential Manager credentials — everything above is live at
+https://github.com/thefirstsamurai/retrocat.)
