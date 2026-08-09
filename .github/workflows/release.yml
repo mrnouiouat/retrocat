@@ -84,12 +84,32 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Needed so --notes-from-tag can read the annotated tag's message.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
 
+      # `gh release upload` requires the release to exist, so create it first
+      # if the tag was pushed without one.
+      - name: Create the GitHub release if it does not exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME already exists"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "retrocat ${GITHUB_REF_NAME#v}" \
+              --notes-from-tag
+          fi
+
       - name: Upload artifacts to the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${GITHUB_REF_NAME}" dist/* --clobber --repo "${GITHUB_REPOSITORY}"
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber --repo "$GITHUB_REPOSITORY"
