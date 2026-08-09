@@ -1,7 +1,7 @@
 """CLI entry point.
 
-Two commands, matching how a shelf-by-shelf backfill actually runs (see
-docs/OPERATOR-GUIDE.md):
+Two pipeline commands, matching how a shelf-by-shelf backfill actually runs
+(see docs/OPERATOR-GUIDE.md):
 
     # Per-shelf triage run — isolates one shelf's problems. Writes
     # output/<shelf>/ (reports + <shelf>.mrc) and a fill-in worklist at
@@ -18,12 +18,27 @@ per-shelf .mrc files — that is what makes a book appearing on two shelves
 import as one resource with two copies. Per-shelf .mrc files are for triage
 spot-checks only.
 
-Both commands read config.toml (or --config PATH) — see sample/config.toml.
+Both pipeline commands read config.toml (or --config PATH) — see
+sample/config.toml.
+
+Plus one standalone tool that needs no config and no network:
+
+    # LC call number from a class + main entry (Cutter table G 63 + year)
+    retrocat callnumber --lc-class BP130 --author "Garry Wills" --year 2017
+    BP130 .W55 2017
+
+    # Just the Cutter for a word
+    retrocat callnumber --cutter Wills
+    W55
+
+    # A whole spreadsheet at once (adds a call_number column, stdout)
+    retrocat callnumber --batch books.csv > books_with_callnumbers.csv
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import logging
 import os
 import sys
@@ -31,6 +46,8 @@ from pathlib import Path
 
 from .catalog import CatalogError
 from .config import DEFAULT_CONFIG_FILENAME, Config, ConfigError, load_config
+from .lc_call import build_call_number, cutter, extract_year
+from .lookup import is_corporate_author
 from .manual import ManualEntry, read_worklist
 from .marc_build import MarcValidationError
 from .parse_scans import ScanParseError
@@ -153,6 +170,86 @@ def _cmd_final(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
+_BATCH_TRUE = {"1", "true", "yes", "y", "x"}
+
+
+def _callnumber_batch(path: Path) -> int:
+    """Add a call_number column to a CSV of books, written to stdout.
+
+    Input needs an ``lc_class`` column; ``author``, ``title``, ``year``, and
+    ``corporate`` are optional. Rows with no lc_class get an empty
+    call_number and a warning rather than a fabricated class — inferring the
+    subject is the pipeline's job, not this tool's.
+    """
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames or "lc_class" not in reader.fieldnames:
+            logging.error(
+                "batch CSV needs an 'lc_class' column (optional: author, "
+                "title, year, corporate); %s has: %s",
+                path, ", ".join(reader.fieldnames or ["<no header>"]),
+            )
+            return 1
+        writer = csv.writer(sys.stdout)
+        writer.writerow([*reader.fieldnames, "call_number"])
+        blank = 0
+        for lineno, row in enumerate(reader, start=2):
+            lc_class = (row.get("lc_class") or "").strip()
+            if not lc_class:
+                blank += 1
+                logging.warning("%s line %d: no lc_class — call_number left "
+                                "blank", path, lineno)
+                writer.writerow([*(row.get(c) or "" for c in reader.fieldnames), ""])
+                continue
+            author = (row.get("author") or "").strip()
+            corporate = (
+                (row.get("corporate") or "").strip().lower() in _BATCH_TRUE
+                or is_corporate_author(author)
+            )
+            call = build_call_number(
+                lc_class,
+                author=author or None,
+                title=(row.get("title") or "").strip() or None,
+                year=extract_year(row.get("year")),
+                corporate=corporate,
+            )
+            writer.writerow([*(row.get(c) or "" for c in reader.fieldnames), call])
+    if blank:
+        logging.warning("%d row(s) had no lc_class and got no call number", blank)
+    return 0
+
+
+def _cmd_callnumber(args: argparse.Namespace) -> int:
+    if args.batch:
+        batch_path = Path(args.batch)
+        if not batch_path.is_file():
+            logging.error("batch CSV not found: %s", batch_path)
+            return 1
+        return _callnumber_batch(batch_path)
+    if args.cutter:
+        result = cutter(args.cutter)
+        if not result:
+            logging.error("no usable letters in %r", args.cutter)
+            return 1
+        print(result)
+        return 0
+    if not args.lc_class:
+        logging.error(
+            "nothing to do — give --lc-class (with --author/--title/--year), "
+            "--cutter WORD, or --batch FILE.csv"
+        )
+        return 1
+    corporate = args.corporate or is_corporate_author(args.author or "")
+    print(build_call_number(
+        args.lc_class,
+        author=args.author or None,
+        title=args.title or None,
+        year=extract_year(args.year),
+        corporate=corporate,
+    ))
+    return 0
+
+
 def _add_common_args(sub: argparse.ArgumentParser) -> None:
     sub.add_argument(
         "--config", default=DEFAULT_CONFIG_FILENAME,
@@ -191,6 +288,51 @@ def main(argv: list[str] | None = None) -> int:
     _add_common_args(final)
     final.set_defaults(func=_cmd_final)
 
+    callnum = sub.add_parser(
+        "callnumber",
+        help="standalone LC call number / Cutter generator (offline, no "
+             "config needed)",
+        description=(
+            "Build a shelf-able LC call number from a class and a main "
+            "entry, using the Library of Congress Cutter table "
+            "(Shelflisting Manual G 63). Entirely offline. Examples:\n"
+            "  retrocat callnumber --lc-class BP130 --author 'Garry Wills' "
+            "--year 2017   ->  BP130 .W55 2017\n"
+            "  retrocat callnumber --cutter Wills                            "
+            "         ->  W55\n"
+            "  retrocat callnumber --batch books.csv > out.csv"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    callnum.add_argument(
+        "--lc-class", dest="lc_class",
+        help="LC class/base number to build on, e.g. BP130 or E185.61",
+    )
+    callnum.add_argument("--author", help="author ('Given Surname'; Cutter "
+                         "uses the first author's surname)")
+    callnum.add_argument("--title", help="title, used for the Cutter when "
+                         "there is no author (leading articles skipped)")
+    callnum.add_argument("--year", help="publication year (any string "
+                         "containing a 4-digit year works, e.g. 'c1994')")
+    callnum.add_argument(
+        "--corporate", action="store_true",
+        help="force corporate main entry (Cutter on the organization's first "
+             "significant word); auto-detected from common org keywords "
+             "otherwise",
+    )
+    callnum.add_argument(
+        "--cutter", metavar="WORD",
+        help="just print the Cutter for one word and exit",
+    )
+    callnum.add_argument(
+        "--batch", metavar="FILE.csv",
+        help="CSV with an lc_class column (optional: author, title, year, "
+             "corporate); writes the same CSV plus a call_number column to "
+             "stdout",
+    )
+    callnum.add_argument("-v", "--verbose", action="store_true")
+    callnum.set_defaults(func=_cmd_callnumber, needs_config=False)
+
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -199,8 +341,10 @@ def main(argv: list[str] | None = None) -> int:
         stream=sys.stderr,
     )
     try:
-        config = load_config(args.config)
-        return args.func(args, config)
+        if getattr(args, "needs_config", True):
+            config = load_config(args.config)
+            return args.func(args, config)
+        return args.func(args)
     except (ConfigError, CatalogError, ScanParseError, PipelineError,
             MarcValidationError) as exc:
         logging.error("%s", exc)

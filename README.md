@@ -71,6 +71,10 @@ of months of per-book data entry.
    barcodes need human eyes (conflicts, manual lookups, estimated call
    numbers), so nobody has to scan a 2,000-row spreadsheet for problems.
 
+The call-number generator (step 5) is also exposed as a **standalone
+offline tool** — `retrocat callnumber` — for catalogers who just want
+properly shaped LC call numbers without running any pipeline (see below).
+
 ## The interesting engineering
 
 - **The ISBN-10/13 canonicalization bug class.** Catalog exports skew
@@ -206,7 +210,52 @@ ILS merge tools that match ISBN strings literally):
 =876  \\$p500101$hR128.3 .B34213 2013$jAvailable
 ```
 
+## Standalone tool: LC call numbers without the pipeline
+
+The offline call-number generator is useful on its own — any cataloger who
+knows a book's LC class but needs a properly shaped, non-colliding shelf
+number can use it directly, no config and no network:
+
+```bash
+# Full call number: class + Cutter (Shelflisting Manual G 63) + year
+$ retrocat callnumber --lc-class BP130 --author "Garry Wills" --year 2017
+BP130 .W55 2017
+
+# Just the Cutter for a word
+$ retrocat callnumber --cutter Wills
+W55
+
+# A whole spreadsheet at once: reads a CSV with an lc_class column
+# (optional author/title/year/corporate), writes it back with a
+# call_number column appended
+$ retrocat callnumber --batch books.csv > books_with_callnumbers.csv
+```
+
+It follows LC main-entry practice: personal authors Cutter on the surname,
+corporate bodies on the organization's first significant word (auto-detected
+from common org keywords, or forced with `--corporate`), no-author books on
+the first significant title word with leading articles skipped. The same
+code is importable as a library: `from retrocat.lc_call import cutter,
+build_call_number`.
+
 ## Adapting it to your library
+
+The short version — five steps from clone to your first shelf:
+
+1. `pip install -e .` and copy `sample/config.toml` next to your data.
+2. Export your catalog from your ILS as CSV and put your export's exact
+   column headers in `[catalog.columns]` (retrocat aborts with a clear list
+   if they don't match the file).
+3. Describe your barcode scheme in `[barcodes]` — or set
+   `valid_new_ranges = []` if you don't have one.
+4. Scan one shelf (two lines per book: ISBN, then barcode — see
+   [docs/OPERATOR-GUIDE.md](docs/OPERATOR-GUIDE.md) for the two-sweep
+   method) and run `retrocat shelf` on it.
+5. Read `output/<shelf>/master_table.csv`, fill `manual/<shelf>.csv`, and
+   when all shelves are done, `retrocat final` builds the one file to
+   sandbox-test in your ILS.
+
+The details:
 
 - **Config first.** `[library]` (name, location, status, default MARC
   language), `[barcodes]` (your scheme; empty `valid_new_ranges` disables

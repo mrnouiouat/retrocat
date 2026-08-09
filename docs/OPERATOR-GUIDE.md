@@ -123,6 +123,12 @@ Load the `final` output into your ILS's sandbox/test environment and check:
 
 ## Practical notes
 
+- **Fixing call numbers by hand?** The offline generator is available
+  standalone: `retrocat callnumber --lc-class BP130 --author "Garry Wills"
+  --year 2017` prints `BP130 .W55 2017`, and `--batch books.csv` processes
+  a whole spreadsheet. Handy when reviewing `reconcile.csv` or assigning
+  numbers to worklist books whose class you know.
+
 - **API caching**: every lookup response is cached in
   `.cache/lookup_cache.json` keyed by canonical ISBN-13. Re-runs and the
   `final` build cost no repeat API calls. Don't delete `.cache/` casually —

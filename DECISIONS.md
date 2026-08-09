@@ -228,12 +228,30 @@ record the owner reads instead of re-deriving the reasoning.
   the silent-failure framing (canonicalization and header validation as the
   same failure class) that is the project's strongest engineering signal.
 
-## Outstanding
+## Post-handoff additions (2026-08-09)
 
-- **Backport candidate for the source repo**: the `unfilled_manual.csv` fix
-  (Phase 7 entry above) — the final build there lists already-resolved
-  manual books as blank rows in its leftover report.
+- **`unfilled_manual.csv` fix backported to the source repo** — done and
+  pushed there (`d1e6054`), with a regression test; both repos now agree.
+- **Standalone call-number tool: `retrocat callnumber`.** Chosen as a
+  subcommand of the one CLI (rather than a second console script) so the
+  tool is discoverable from `retrocat --help` and there is exactly one
+  entry point to document; it sets `needs_config=False`, so unlike the
+  pipeline commands it needs no config.toml, no network, and no data files.
+  Three modes: single-shot (`--lc-class/--author/--title/--year/--corporate`),
+  `--cutter WORD`, and `--batch FILE.csv` (appends a `call_number` column,
+  writes to stdout). Batch rows without an `lc_class` get a blank call
+  number and a warning — inferring the subject class is the pipeline's job
+  (it has category signals to work from); the standalone tool never
+  fabricates one. `lc_call.py` itself is untouched — the tool is purely a
+  CLI wrapper, so pipeline and standalone use share one implementation.
+- README gained the standalone-tool section and a five-step "adapting it to
+  your library" quick list ahead of the existing detail bullets;
+  OPERATOR-GUIDE mentions the tool as a reconcile-review aid.
+- **Final verification run (2026-08-09)** on the synthetic sample from a
+  clean scratch directory, through the real CLI with live APIs: both shelf
+  triages, worklist fill, `final` build (8 records, all round-trip),
+  `unfilled_manual.csv` empty with the resolved book excluded, conflict
+  demo blocked with exit 1 + reports written + no `.mrc`, and all three
+  callnumber modes. 285 tests green.
 
-(The push to origin completed unattended on 2026-08-09 via cached Git
-Credential Manager credentials — everything above is live at
-https://github.com/thefirstsamurai/retrocat.)
+(Both repos pushed: retrocat `main`, source repo `master`.)
