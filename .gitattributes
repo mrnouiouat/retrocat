@@ -1,0 +1,6 @@
+# Normalize line endings in the repo; check out LF everywhere.
+* text=auto eol=lf
+
+# MARC files are binary. The golden fixture is compared byte-for-byte, so
+# line-ending normalization would corrupt it.
+*.mrc binary
