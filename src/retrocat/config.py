@@ -98,6 +98,13 @@ class CatalogConfig:
 
 
 @dataclass(frozen=True)
+class LookupConfig:
+    # Path to a custom LC class-fallback map (TOML, same shape as the shipped
+    # retrocat/data/lc_class_map.toml). Empty = use the shipped map.
+    class_map_file: str = ""
+
+
+@dataclass(frozen=True)
 class OutputConfig:
     mrc_filename: str = "catalog_import.mrc"
 
@@ -107,6 +114,7 @@ class Config:
     library: LibraryConfig = field(default_factory=LibraryConfig)
     barcodes: BarcodeConfig = field(default_factory=BarcodeConfig)
     catalog: CatalogConfig = field(default_factory=CatalogConfig)
+    lookup: LookupConfig = field(default_factory=LookupConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
 
 
@@ -139,7 +147,8 @@ def load_config(path: str | Path) -> Config:
 
     problems: list[str] = []
     _check_unknown_keys(
-        raw, {"library", "barcodes", "catalog", "output"}, "top level", problems
+        raw, {"library", "barcodes", "catalog", "lookup", "output"},
+        "top level", problems,
     )
 
     lib_raw = raw.get("library", {})
@@ -184,6 +193,12 @@ def load_config(path: str | Path) -> Config:
         columns=columns, book_type=cat_raw.get("book_type", "Book")
     )
 
+    look_raw = raw.get("lookup", {})
+    _check_unknown_keys(look_raw, _field_names(LookupConfig), "lookup", problems)
+    lookup = LookupConfig(**{
+        k: v for k, v in look_raw.items() if k in _field_names(LookupConfig)
+    })
+
     out_raw = raw.get("output", {})
     _check_unknown_keys(out_raw, _field_names(OutputConfig), "output", problems)
     output = OutputConfig(**{
@@ -191,7 +206,7 @@ def load_config(path: str | Path) -> Config:
     })
 
     config = Config(library=library, barcodes=barcodes, catalog=catalog,
-                    output=output)
+                    lookup=lookup, output=output)
     problems.extend(validate_config(config))
     if problems:
         raise ConfigError(

@@ -93,3 +93,40 @@ record the owner reads instead of re-deriving the reasoning.
 - `test_config.py` loads `sample/config.toml` in the suite, so the shipped
   sample can never drift into invalidity.
 - 140 tests passing at this checkpoint.
+
+## Phase 5 — lookup, language, marc_build, reconcile, manual (2026-08-08)
+
+- **The class-fallback map ships as `src/retrocat/data/lc_class_map.toml`**
+  (packaged via `[tool.setuptools.package-data]`), loaded with `tomllib`,
+  which preserves document order — order is semantic (first keyword found
+  wins; narrower keys are written before words they contain). The file also
+  carries `default_class` (the last-resort LC class, formerly the
+  `DEFAULT_LC_CLASS` constant), so the whole "where does an unclassifiable
+  book go" policy lives in one overridable file. Override hook:
+  `[lookup].class_map_file` in config.toml. The shipped map keeps the
+  religious-studies Tier 1 as a documented worked example, per the handoff.
+- `_class_fallback` became the module-level `class_fallback(class_map, ...)`
+  so tests and future tools can use it without a client.
+- **`language.py` no longer owns a default language.** `DEFAULT_LANGUAGE`
+  was deleted; `marc_build._field_008` takes the default from
+  `[library].marc_language` per the backport instruction. Both config load
+  and MARC build validate the 3-character shape.
+- **`marc_build` dropped the `include_location_status` flag.** Location and
+  status subfields (852 $c / 876 $j) are emitted iff the config values are
+  non-empty — "blank config = let the ILS default" replaces a boolean that
+  existed to reproduce the pilot's shape. The golden fixture regeneration in
+  Phase 7 will use blank location/status for the pilot-shaped records.
+- `reconcile.py`: when the export has no call-number column, every row's
+  `existing_call_number` reads `"(export has no call-number column)"` and
+  `needs_fix` stays False — an explicit statement instead of a blank that
+  would read as "this book has no call number on record". A warning is
+  logged once per run.
+- `manual.py` takes `default_lc_class` as an explicit parameter (the
+  pipeline passes the loaded class map's default) rather than importing a
+  constant.
+- Vendor/institution names stripped from comments while keeping the
+  technical reasoning (dual-020 insurance, sandbox validation, LoC
+  unreachability) exactly as the handoff prescribed.
+- `test_manual.py`'s end-to-end section (which drives `run_pipeline`) is
+  deferred to Phase 6 with the pipeline itself; everything else ported.
+- 243 tests passing at this checkpoint.

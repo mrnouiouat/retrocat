@@ -55,6 +55,13 @@ resource_id = ""             # optional: your ILS's internal record ID, used
 type = ""                    # optional: the resource-type column; "" means
                              # your export contains only books
 
+[lookup]
+# Optional: path to your own LC class-fallback map (copy and edit
+# src/retrocat/data/lc_class_map.toml — the shipped one is a worked example
+# tuned to a religious-studies collection). Leave blank to use the shipped
+# map.
+class_map_file = ""
+
 [output]
 # Filename of the combined MARC file the `final` subcommand writes.
 mrc_filename = "catalog_import.mrc"

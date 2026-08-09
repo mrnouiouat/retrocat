@@ -1,0 +1,125 @@
+# Class-level LC fallback map: keyword found in a book's subject signals
+# (Google Books categories + OpenLibrary subject headings) -> LC class.
+# lc_call.py then enriches the bare class with a Cutter + year into a
+# shelf-able number, tagged confidence=low for human spot-check.
+#
+# THIS SHIPPED MAP IS A WORKED EXAMPLE, TUNED TO ONE COLLECTION. It was
+# built for an academic religious-studies (Islamic seminary) library and
+# its Tier 1 reflects that. It covers the small BISAC vocabulary Google
+# actually returns, so it works acceptably as a general-collection default,
+# but you should review Tier 1 — and the fiction note at the bottom —
+# against your own collection. Point [lookup].class_map_file in config.toml
+# at your own copy to override without touching the package.
+#
+# ORDER MATTERS: lookup takes the FIRST keyword found in the joined subject
+# string, so a longer/narrower keyword MUST precede any word it contains
+# ("islamic law" before "islam", "social science" before "science",
+# "business & economics" before "business", "performing arts" before "art").
+
+# Last-resort class used when NOTHING maps — no authoritative call number
+# and no matching keyword. The project rule is that every titled book leaves
+# with a call number, never blank, so it can always be shelved somewhere.
+# "AC" is LC "General Works / Collections", the honest neighborhood for a
+# genuinely-unclassified item; such rows are tagged source=default and
+# surfaced separately in review output.
+default_class = "AC"
+
+[classes]
+# --- Tier 1: collection-specific (Islamic studies, religion) ---
+"qur'an" = "BP130"
+"quran" = "BP130"
+"koran" = "BP130"
+"hadith" = "BP135"
+"sufism" = "BP189"
+"sufi" = "BP189"
+"islamic law" = "KBP"
+"shariah" = "KBP"
+"sharia" = "KBP"
+"fiqh" = "KBP"
+"muhammad" = "BP75"
+"prophet" = "BP75"
+"islamic" = "BP"
+"islam" = "BP"
+"muslim" = "BP"
+"bible" = "BS"
+"biblical" = "BS"
+"practical theology" = "BV"
+"christianity" = "BR"
+"christian" = "BR"
+"judaism" = "BM"
+"jewish" = "BM"
+"buddhism" = "BQ"
+"comparative religion" = "BL"
+"religion" = "BL"
+"religious" = "BL"
+# --- Tier 2: general academic subjects (BISAC top-level headings) ---
+# Race/civil-rights block first: "african american history" contains the
+# substring "american history", so these must precede it.
+"lynching" = "HV6457"
+"african american" = "E185"
+"race relations" = "E185.61"
+"racism" = "E185.61"
+"slavery" = "HT861"
+"civil rights" = "JC599"
+"american history" = "E"
+"united states" = "E"
+"middle east" = "DS"
+"africa" = "DT"
+"asia" = "DS"
+"europe" = "D"
+"civilization" = "CB"
+"world history" = "D"
+"history" = "D"
+"political science" = "J"
+"politics" = "J"
+"law" = "K"
+"biography & autobiography" = "CT"
+"autobiography" = "CT"
+"biography" = "CT"
+"true crime" = "HV"
+"criminology" = "HV"
+"family & relationships" = "HQ"
+"social science" = "H"
+"sociology" = "HM"
+"anthropology" = "GN"
+"business & economics" = "HB"
+"economics" = "HB"
+"business" = "HF"
+"body, mind & spirit" = "BF"
+"self-help" = "BF"
+"psychology" = "BF"
+"philosophy" = "B"
+"study aids" = "LB"
+"education" = "L"
+"language arts & disciplines" = "P"
+"language arts" = "P"
+"foreign language study" = "P"
+"literary criticism" = "PN"
+"literary collections" = "PN"
+"poetry" = "PN"
+"drama" = "PN"
+"language" = "P"
+"literature" = "PN"
+"mathematics" = "QA"
+"computers" = "QA76"
+"health & fitness" = "RA"
+"medical" = "R"
+"medicine" = "R"
+"nature" = "QH"
+"science" = "Q"
+"technology & engineering" = "T"
+"technology" = "T"
+"performing arts" = "PN"
+"music" = "M"
+"art" = "N"
+"cooking" = "TX"
+"travel" = "G"
+"sports & recreation" = "GV"
+"reference" = "AE"
+# DELIBERATELY UNMAPPED: "Fiction" / "Juvenile Fiction". The collection this
+# map was built for holds effectively no fiction, so those Google categories
+# almost always signal a mis-tag (seen live: a lynching memoir tagged
+# "Juvenile Fiction"). Rather than shelve those in a confident-but-wrong PZ,
+# they fall through to default_class above and are flagged for review. Add
+# "fiction" = "PZ" (or PS/PR) in your override file if your collection holds
+# real fiction.
