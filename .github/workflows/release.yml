@@ -1,0 +1,95 @@
+name: release
+
+# Publishes to PyPI when a v* tag is pushed, using Trusted Publishing (OIDC).
+# There is no API token anywhere: PyPI is configured to trust this repository
+# and this workflow filename, and GitHub mints a short-lived identity token
+# for the publish step.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+
+      - name: Check metadata renders
+        run: python -m twine check dist/*
+
+      # retrocat loads data/lc_class_map.toml via importlib.resources. If it
+      # is missing from a built artifact, every fresh install breaks at
+      # runtime while a source checkout keeps working, so verify it is
+      # actually bundled rather than assuming package-data config took.
+      - name: Verify packaged data file is bundled
+        run: |
+          python - <<'PY'
+          import sys, tarfile, zipfile, glob
+
+          wheel = glob.glob("dist/*.whl")[0]
+          sdist = glob.glob("dist/*.tar.gz")[0]
+          target = "data/lc_class_map.toml"
+
+          in_wheel = any(n.endswith(target) for n in zipfile.ZipFile(wheel).namelist())
+          with tarfile.open(sdist) as t:
+              in_sdist = any(n.endswith(target) for n in t.getnames())
+
+          print(f"{target} in wheel: {in_wheel}")
+          print(f"{target} in sdist: {in_sdist}")
+          if not (in_wheel and in_sdist):
+              sys.exit("packaged data file missing from a build artifact")
+          PY
+
+      - name: Smoke-test the wheel in a clean environment
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --quiet dist/*.whl
+          cd /tmp  # run with no source tree on the path
+          /tmp/smoke/bin/retrocat callnumber --cutter Wills
+          /tmp/smoke/bin/python -c "from retrocat.lookup import load_class_map; print('class map OK:', load_class_map().default_class)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # required for Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  attach-to-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Upload artifacts to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" dist/* --clobber --repo "${GITHUB_REPOSITORY}"

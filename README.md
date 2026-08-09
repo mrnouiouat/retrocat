@@ -338,6 +338,7 @@ A few things worth knowing before you start:
 - [docs/VALIDATION.md](docs/VALIDATION.md): what's been validated, and how
 - [DECISIONS.md](DECISIONS.md): the design decisions behind the generalized
   version, and why each one went the way it did
+- [CHANGELOG.md](CHANGELOG.md): what changed between releases
 
 ## License
 

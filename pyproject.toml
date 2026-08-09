@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "retrocat"
-version = "0.1.0"
+version = "0.1.1"
 description = "Retrospective conversion cataloging: paired ISBN/barcode scans -> validated MARC21 for bulk import into a library ILS"
 readme = "README.md"
 license = "MIT"
@@ -46,7 +46,8 @@ dependencies = [
 Homepage = "https://github.com/mrnouiouat/retrocat"
 Repository = "https://github.com/mrnouiouat/retrocat"
 Issues = "https://github.com/mrnouiouat/retrocat/issues"
-Changelog = "https://github.com/mrnouiouat/retrocat/blob/main/DECISIONS.md"
+Changelog = "https://github.com/mrnouiouat/retrocat/blob/main/CHANGELOG.md"
+"Design notes" = "https://github.com/mrnouiouat/retrocat/blob/main/DECISIONS.md"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
