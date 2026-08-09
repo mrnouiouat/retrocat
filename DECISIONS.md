@@ -130,3 +130,23 @@ record the owner reads instead of re-deriving the reasoning.
 - `test_manual.py`'s end-to-end section (which drives `run_pipeline`) is
   deferred to Phase 6 with the pipeline itself; everything else ported.
 - 243 tests passing at this checkpoint.
+
+## Phase 6 — pipeline.py and __main__.py (2026-08-08)
+
+- Straight port as amended: `_conflict_gate`, `--allow-conflicts`,
+  stale-`.mrc` removal, and both gate test classes carried over intact. The
+  only behavior change is the prescribed one — conflict range text comes
+  from config (`BarcodeConfig.describe_ranges`), tested in
+  `test_conflict_note_carries_configured_ranges`.
+- `run_pipeline` takes a required `config: Config` and threads it everywhere;
+  `mrc_name=None` now means "use `[output].mrc_filename`". The class map is
+  loaded once per run (respecting `[lookup].class_map_file`) and feeds both
+  the lookup client and the manual-entry default class.
+- CLI: `--config` on both subcommands, default `./config.toml`; `ConfigError`
+  and the new `CatalogError` (header validation) exit 1 with a clean message
+  like the other expected failures. The `final` subcommand's output filename
+  comes from config instead of a hardcoded institution name.
+- The source repo's `test_manual.py` end-to-end section became
+  `tests/test_pipeline_manual.py` (it drives `run_pipeline`, so it belongs
+  with the pipeline tests, and keeps `test_manual.py` import-light).
+- 258 tests passing at this checkpoint.
