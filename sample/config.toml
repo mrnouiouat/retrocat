@@ -1,0 +1,60 @@
+# retrocat configuration — copy this file next to your data, edit, and pass
+# it with --config (or leave it named config.toml in the directory you run
+# from). Every value here is validated at startup; typos in key names are
+# hard errors, not silent defaults.
+
+[library]
+# Required. Stamped into every MARC holdings field (852 $b) — your ILS
+# matches it against a library name it already knows about.
+home_library = "Anytown College Library"
+# Optional shelving location / item status, stamped per copy (852 $c and
+# 876 $j). Leave blank to let your ILS apply its import defaults.
+location = "Main Campus"
+status = "Available"
+# MARC 008/35-37 language code used when no metadata source reports one.
+# Three characters, MARC (ISO 639-2/B) form: eng, ara, spa, fre, ger...
+marc_language = "eng"
+
+[barcodes]
+# Your item-barcode scheme. Scan lines of exactly `length` digits are
+# classified as barcodes (10- and 13-digit lines are ISBNs — a barcode
+# length of 10 or 13 is therefore rejected at startup).
+length = 6
+# Optional inclusive bounds for what counts as a plausible barcode at all;
+# a `length`-digit scan line outside them is a hard parse error (it is
+# probably a misread). Omit both to accept any `length`-digit number.
+min = 500000
+max = 599999
+# Ranges a NEW sticker may legitimately carry, as [lo, hi] inclusive pairs.
+# Used to catch impossible numbers on fresh stickers (e.g. a barcode from a
+# roll your library never bought). If your unused sticker roll has gaps —
+# numbers already stuck on books out of sequence — list the free runs on
+# either side of each gap. Leave the list empty ([]) to disable the check
+# entirely if your library has no sticker-number scheme.
+valid_new_ranges = [[500100, 599999]]
+
+[catalog]
+# Rows whose type column (below) differs from this value are skipped —
+# collections, DVDs, equipment records, etc.
+book_type = "Book"
+
+[catalog.columns]
+# Map retrocat's fields to YOUR export's exact column headers. These names
+# are validated against the file's real header row at load time; a missing
+# column aborts the run with a list of what was not found. This is
+# deliberate: with a wrong ISBN column name every book would classify as
+# new and the dedup that is the entire point of the tool would silently
+# stop working.
+isbn = "ISBN"                # required
+barcode = "Barcode"          # required
+title = "Title"
+author = "Author"
+call_number = "Call Number"  # set to "" if your export has no call numbers
+resource_id = ""             # optional: your ILS's internal record ID, used
+                             # only to make log/report lines identifiable
+type = ""                    # optional: the resource-type column; "" means
+                             # your export contains only books
+
+[output]
+# Filename of the combined MARC file the `final` subcommand writes.
+mrc_filename = "catalog_import.mrc"

@@ -40,3 +40,56 @@ record the owner reads instead of re-deriving the reasoning.
   exception did not apply. Real corporate *authors* (e.g. El-Falah Foundation)
   stay, per the locked fixtures decision.
 - 56 tests passing at this checkpoint.
+
+## Phases 3+4 — config.py, parse_scans.py, catalog.py, classify.py (2026-08-08)
+
+### config.py design calls
+
+- **Unknown config keys are hard errors**, not warnings. A typo like
+  `home_libary` silently reverting to a default is the same failure class as
+  a renamed export column silently disabling dedup — the project's whole
+  posture is that misconfiguration must be loud.
+- **Barcode length 10 or 13 is rejected at load** — it would make scan lines
+  ambiguous against ISBN classification. Any other length works.
+- `[barcodes].min`/`max` are optional (absent = any all-digit token of the
+  configured length is a barcode). `valid_new_ranges` is a list of `[lo, hi]`
+  pairs; **empty list = collision-range check disabled entirely**, per the
+  handoff's requirement that a library with no barcode scheme can switch it
+  off. The check lives on `BarcodeConfig.is_valid_new_barcode`, replacing the
+  source repo's `barcode_in_valid_new_range` + hardcoded sticker-roll
+  constants (not ported, as instructed).
+- `[catalog.columns].isbn` and `.barcode` are required non-empty; `title`,
+  `author`, `call_number` default to their conventional names; `resource_id`
+  and `type` default to `""` (= my export doesn't have this). An empty
+  `call_number` sets `ExistingCatalog.has_call_numbers = False`, which
+  `reconcile.py` will surface explicitly in Phase 5 instead of emitting
+  silent blanks.
+- `marc_language` is length-checked at config load (3 chars) *and* will be
+  re-checked at MARC build time — a wrong-length code corrupts the fixed-
+  length 008 field silently, so both ends stay paranoid.
+- `--config` (Phase 6) will default to `./config.toml`; the missing-file
+  error points at `sample/config.toml`.
+
+### Port deviations
+
+- **Kept the "barcode on record but record has no ISBN → ALREADY_DONE"
+  branch that the handoff calls unreachable.** Against the current code it
+  IS reachable: `catalog.py` maps a barcode to an *empty* ISBN set whenever
+  an export row has a barcode but no usable ISBN (common in messy exports),
+  and `classify._classify_pair` then takes the `if not on_record:` branch.
+  There is a test proving it (`test_barcode_on_record_but_record_has_no_isbn`).
+  Flagging per the handoff's "the code wins" rule rather than silently
+  deviating; nothing was dropped.
+- **Catalog header validation added** as specified: every configured column
+  name is checked against the real header row before any row is read;
+  missing columns abort listing both the configured names and the actual
+  header. Covers the `Type` filter the same way (configured-but-absent
+  aborts; unconfigured = filter off, documented as "my export contains only
+  books").
+- Ported tests replace the source repo's real sticker-range values with a
+  generic 5xxxxx scheme (institution range facts are institution data, even
+  in test constants). The classify tests now also cover: range note built
+  from config, range check disabled, blank type value kept, type filter off.
+- `test_config.py` loads `sample/config.toml` in the suite, so the shipped
+  sample can never drift into invalidity.
+- 140 tests passing at this checkpoint.
