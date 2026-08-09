@@ -194,3 +194,45 @@ record the owner reads instead of re-deriving the reasoning.
   two-command flow (shelf → fill worklist → final), the conflict-gate exit
   code, `--allow-conflicts`, config errors, and the header-validation abort.
 - 272 tests passing at this checkpoint.
+
+## Phase 8 — README and docs (2026-08-09)
+
+- **The README's demo output is genuine.** Before writing it, the real CLI
+  was run live over `sample/` (shelf → fill worklist → final) from a scratch
+  directory. OpenLibrary and LoC resolved every book — including an LoC
+  call number Google/OpenLibrary lacked — even though Google Books was
+  unavailable during the run, which is itself a live demonstration of the
+  per-source degradation. The quoted console output, master-table rows, and
+  decoded MARC record are from that run (Google's failure warnings omitted;
+  they were caused by a stale environment artifact on the build machine,
+  not something a stranger would see).
+- **The numbers stay honest per the resolved open question**: the README's
+  "Status, honestly" section states the sandbox validation, states the full
+  backfill is *in progress, not finished*, and frames throughput as
+  projected ("import-ready MARC in minutes once a shelf is scanned"), never
+  as an achieved 150-hours-saved claim.
+- Institution named in the README narrative only (hook + status), per the
+  locked decision. No URL invented for it. Everything else in the repo
+  stays generic; the final sweep's only other hit is the class map's
+  generic "religious-studies (Islamic seminary) library" collection
+  descriptor, which names no institution.
+- `docs/OPERATOR-GUIDE.md` generalizes the source repo's process doc: the
+  two-sweep capture method, triage flow, gates, and a sandbox checklist
+  that folds in the merge-behavior nuance the original deployment learned
+  (resource-level fields adopt the incoming record; pre-existing copies
+  keep their old copy-level call numbers — flagged as a post-import cleanup
+  item, ILS-neutrally).
+- `docs/DESIGN.md` distills the source `CLAUDE.md`'s data contracts and
+  edge-case reasoning, rewritten generic: config-driven barcode scheme, the
+  header-validation rationale, the full lookup retry/caching policy, and
+  the silent-failure framing (canonicalization and header validation as the
+  same failure class) that is the project's strongest engineering signal.
+
+## Outstanding
+
+- **Push to origin.** Attempted at build end; if it required interactive
+  browser auth it may not have completed unattended — see the final session
+  report. `git push origin main` from `C:\Users\toile\Desktop\retrocat`
+  completes it; nothing else is pending.
+- **Backport candidate for the source repo**: the `unfilled_manual.csv` fix
+  (Phase 7 entry above).
