@@ -50,10 +50,11 @@ barcode = "Barcode"          # required
 title = "Title"
 author = "Author"
 call_number = "Call Number"  # set to "" if your export has no call numbers
-resource_id = ""             # optional: your ILS's internal record ID, used
-                             # only to make log/report lines identifiable
-type = ""                    # optional: the resource-type column; "" means
-                             # your export contains only books
+resource_id = "Resource ID"  # optional: your ILS's internal record ID, used
+                             # only to make log/report lines identifiable;
+                             # set to "" if your export has no such column
+type = "Type"                # optional: the resource-type column; set to ""
+                             # if your export contains only books
 
 [lookup]
 # Optional: path to your own LC class-fallback map (copy and edit

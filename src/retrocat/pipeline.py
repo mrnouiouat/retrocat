@@ -292,7 +292,9 @@ def _write_master_table(
     logger.info("wrote master table (%d rows) to %s", len(rows), path)
 
 
-def _write_manual_worklist(books: list[ClassifiedBook], path: Path) -> None:
+def _write_manual_worklist(
+    books: list[ClassifiedBook], path: Path, resolved: set[str] = frozenset()
+) -> None:
     """Emit the fill-in worklist for every MANUAL book (merge-preserving).
 
     Pre-fills what the pipeline knows — shelf, barcode, ISBN (blank for a
@@ -300,6 +302,10 @@ def _write_manual_worklist(books: list[ClassifiedBook], path: Path) -> None:
     title/author for the operator to complete at the shelf. See manual.py for
     why this lives outside the regenerable output/ tree and how re-runs preserve
     already-entered rows.
+
+    ``resolved`` barcodes (already handled via a filled worklist entry this
+    run) are excluded — the final build's leftover report must list only the
+    books that still need a human, not re-list handled ones as blank rows.
     """
     entries = [
         ManualEntry(
@@ -309,7 +315,7 @@ def _write_manual_worklist(books: list[ClassifiedBook], path: Path) -> None:
             notes=book.note,
         )
         for book in books
-        if book.action == Action.MANUAL
+        if book.action == Action.MANUAL and book.barcode not in resolved
     ]
     write_worklist(entries, path)
 
@@ -389,6 +395,7 @@ def run_pipeline(
         classification.books,
         Path(manual_worklist_path) if manual_worklist_path
         else out_dir / "manual_worklist.csv",
+        resolved=set(manual_by_barcode),
     )
     reconcile_rows = build_reconcile(classification.books, metadata, catalog)
     write_reconcile_csv(reconcile_rows, out_dir / "reconcile.csv")

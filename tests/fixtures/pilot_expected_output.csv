@@ -1,0 +1,21 @@
+barcode,isbn,action,title,author,lc_call_number,notes
+500148,9781905837595,CREATE,Muhammad,Nabeel Al-Azami,BP75.3,class-level; ILS sandbox autofill confirmed
+500149,9781565645998,MERGE_CANDIDATE,Abu Zayd al-Balkhi's Sustenance of the Soul,Malik Badri,R128.3 .B34213 2013,
+500150,9781933633084,MERGE_CANDIDATE,Articles of impeachment against George W. Bush,"Center for Constitutional Rights (New York, N.Y.)",E903.3 .A78 2006,export stores the ISBN-10 form — canonicalization reclassified this from the pilot's CREATE
+500151,9780813511559,CREATE,"To be a slave in Brazil, 1550-1888",Kátia M. de Queirós Mattoso,HT1126 .M3713 1986,
+500152,9780312156480,MERGE_CANDIDATE,The secret war against the Jews,"John Loftus, John Loftus, Mark Aarons",E183.8.I7 L63,export stores the ISBN-10 form — canonicalization reclassified this from the pilot's CREATE
+500153,9781449903244,CREATE,Reflections on the Qur'an,"Mohamed Hag Magid, Hanaa Unus",BP130.3,class-level; ILS sandbox autofill confirmed
+500154,9781565646889,CREATE,Brief Introduction to Qur'anic Exegesis,Ali Suleiman Ali,BP130.2 .A45 2017,
+500155,9781565646988,MERGE_CANDIDATE,Qur'anic Terminology,Balil Abd Al-Karim,BP130.4 .A23 2017,
+500156,9780199836741,CREATE,Reading the Qur'an,Ziauddin Sardar,BP130.4 .S376 2011,
+500157,9780691172422,CREATE,Hitler's American Model,James Q. Whitman,(pending),unresolved in the pilot; the ILS autofilled it on import — do not fabricate
+500158,9781400097975,CREATE,The price of admission,Daniel Golden,LB2351.2 .G65 2006b,
+500159,9780316168717,CREATE,The ornament of the world,Maria Rosa Menocal,DP99 .M465 2002,
+500160,9780316204361,CREATE,David and Goliath,Malcolm Gladwell,BF503.G53 2013,
+500161,9780195336221,CREATE,Separate and Unequal,Desmond King,JK723.A34K56 2007,
+500162,9780415455183,CREATE,Introducing Islam,William Shepard,BP50.S485 2009,
+500163,9781107620377,CREATE,The Impact of Lynching on Black Culture and Memory,Karlos K Hill,HV6457,
+500164,9780253211040,CREATE,Islam in the African-American experience,Richard Brent Turner,BP67.U6 T87 1997,
+500165,9781515129158,MANUAL,(needs title),,(pending),NEEDS TITLE — read off physical book
+500166,9780871546678,CREATE,Invisible men,Becky Pettit,HV9469 .P46 2012,
+500167,9780674061859,CREATE,Southern Horrors: Women and the Politics of Rape and Lynching,Crystal N. Feimster,HV6250.4.W65F43 2011,

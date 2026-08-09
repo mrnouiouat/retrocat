@@ -150,3 +150,47 @@ record the owner reads instead of re-deriving the reasoning.
   `tests/test_pipeline_manual.py` (it drives `run_pipeline`, so it belongs
   with the pipeline tests, and keeps `test_manual.py` import-light).
 - 258 tests passing at this checkpoint.
+
+## Phase 7 — sample data, golden fixture, hermetic e2e (2026-08-09)
+
+- **`sample/catalog_export.csv`** (58 rows): title/author/ISBN trios are real
+  bibliographic facts drawn from the source library's export (allowed per
+  the locked fixtures decision); resource IDs, barcodes (5000xx), home
+  library ("Anytown College Library"), and junk-row values are synthetic.
+  33/58 ISBN cells stored in ISBN-10 form so canonicalization is
+  demonstrated, not claimed. All the specified junk cases are present:
+  invalid-length ISBN, call-number-shaped barcode cell, multi-value `;`
+  ISBN cell, a barcode-like call number, a no-ISBN row, and two non-Book
+  rows. Generator script kept in the session scratchpad only (one-shot,
+  reads the private export — must not enter this repo).
+- **`sample/scans/`** (shelf-a, shelf-b) exercises ALREADY_DONE (ISBN-10 vs
+  EAN canonical agreement), MERGE_CANDIDATE with dual 020, CREATE,
+  same-ISBN-twice multi-copy, cross-shelf multi-copy (9780199836741 on both
+  shelves), and a lone barcode. The CONFLICT case lives in a separate
+  `sample/conflict-demo.txt` — a conflict inside shelf-a would block its
+  `.mrc` by design and break the 60-second happy-path demo.
+- **Golden fixture**: pilot ISBNs/titles/authors kept; barcodes renumbered
+  500148–500167; the export dependency replaced with a 4-row synthetic
+  `pilot_catalog_export.csv` holding exactly the merge-candidate ISBNs
+  (two in ISBN-10-only form, reproducing the canonicalization
+  reclassification the source repo documents as deltas). The `.mrc` is
+  regenerated from the pipeline (`scripts/regen_golden.py`) and compared
+  **byte-for-byte** — simpler and stricter than the source repo's
+  delta-tolerant comparison, which existed only because its reference file
+  predated the amended rules. Field-level behavioral assertions ride
+  alongside so the golden file can't decay into a self-fulfilling snapshot.
+  `tests/fixtures/README.md` rewritten honestly (structural golden file,
+  not the vendor-accepted bytes); `docs/VALIDATION.md` records what was
+  sandbox-validated without names/URLs/dates.
+- **Deviation (bug fix): `unfilled_manual.csv` now lists only genuinely
+  unfilled books.** The source repo writes every MANUAL-bucket book to the
+  final run's leftover report, including ones already resolved from a
+  filled worklist (as blank rows) — contradicting its own spec ("Unfilled
+  rows ... are listed in unfilled_manual.csv"). `_write_manual_worklist`
+  takes a `resolved` barcode set and skips them. Shelf runs are unaffected
+  (they pass no filled entries). Worth backporting to the source repo.
+- CLI tests (`test_cli_sample.py`) drive the real `main(argv)` over a copy
+  of `sample/` with `pipeline.LookupClient` monkeypatched — the documented
+  two-command flow (shelf → fill worklist → final), the conflict-gate exit
+  code, `--allow-conflicts`, config errors, and the header-validation abort.
+- 272 tests passing at this checkpoint.
