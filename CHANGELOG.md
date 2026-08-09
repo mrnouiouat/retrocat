@@ -8,8 +8,6 @@ Design reasoning lives in [DECISIONS.md](DECISIONS.md), which explains *why*
 the pipeline works the way it does. This file only records what changed
 between releases.
 
-## [Unreleased]
-
 ## [0.1.1] - 2026-08-09
 
 Packaging and metadata only. No change to pipeline behavior, and the 285
@@ -61,6 +59,5 @@ First public release.
 - Configuration through `config.toml`, covering library identity, barcode
   scheme, catalog column mapping, and output filename.
 
-[Unreleased]: https://github.com/mrnouiouat/retrocat/compare/v0.1.1...HEAD
 [0.1.1]: https://github.com/mrnouiouat/retrocat/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mrnouiouat/retrocat/releases/tag/v0.1.0

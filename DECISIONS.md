@@ -21,10 +21,13 @@ map is a data file rather than a Python constant, so a library can override it
 without touching source. That decision shaped `pyproject.toml` before the map
 itself existed.
 
-**The LICENSE copyright holder is a GitHub handle, not a legal name.** I
-didn't have a confirmed real name to put there when I first pushed, and
-inventing one from an email address seemed worse than the handle. This is a
-one-line fix and it should get made.
+**The LICENSE copyright holder is a GitHub handle rather than a legal name.**
+That's a deliberate choice, not an oversight. What actually mattered was that
+the holder match the repo owner: for a while the LICENSE said `thefirstsamurai`
+while the account had been renamed to `mrnouiouat`, so a reader opening the
+LICENSE saw a copyright holder who wasn't the person publishing the code. On a
+project whose pitch is provenance, that reads badly. The handle is now
+consistent across the LICENSE, the clone URL, and the git remote.
 
 ## Configuration
 
@@ -188,6 +191,39 @@ from, so it declines rather than guessing.
 `lc_call.py` itself is untouched by all of this. The tool is a CLI wrapper, so
 pipeline and standalone share one implementation of the Cutter algorithm.
 
+## Packaging and releases
+
+**Distribution is via PyPI, with the clone as the secondary path.** The stated
+audience is small-library staff with no budget for cataloging software, and
+for that reader `git clone && pip install -e .` is a real barrier rather than
+a formality. `pip install retrocat` is the version of this project they can
+actually try.
+
+**A changelog and a design log are different documents.** For one release the
+PyPI `Changelog` URL pointed at `DECISIONS.md`, which is this file: reasoning
+about why the pipeline works the way it does, with no notion of what changed
+between versions. Someone clicking "Changelog" wants a release history. They
+are now separate URLs, with `CHANGELOG.md` as the changelog and this file
+listed as design notes. PyPI metadata is immutable per version, so correcting
+a mislabeled URL costs a release; 0.1.1 exists mostly for that.
+
+**Releases publish from CI via Trusted Publishing (OIDC), not from a laptop.**
+0.1.0 went up with a long-lived API token through twine, which means the token
+existed on a developer machine and in that machine's shell history. Trusted
+Publishing removes it: PyPI is configured to trust this repository and the
+`release.yml` workflow, and GitHub mints a short-lived identity token per run.
+A release is now `git tag && git push`, and uploads carry sigstore
+attestations as a side effect.
+
+**The release workflow verifies the packaged data file before publishing.**
+`data/lc_class_map.toml` is loaded through `importlib.resources`, so if it
+ever falls out of a built artifact, every fresh install breaks at runtime
+while a source checkout keeps working perfectly. That's a bug you cannot
+notice locally, and PyPI versions can't be replaced once uploaded, so the
+workflow asserts the file is present in both the wheel and the sdist and
+smoke-tests the built wheel in a clean virtualenv with no source tree on the
+path.
+
 ## Verification
 
 **The README's demo output is from a real run**, not composed. I ran the CLI
@@ -216,12 +252,13 @@ why that column exists.
 
 ## Open items
 
-- Put a real legal name in the LICENSE.
 - Multi-copy grouping is structurally tested but has never been through a live
   import, because the pilot contained no multi-copy book. Someone needs to
   confirm one in an ILS sandbox before a full production import.
 - The dual-`020` merge insurance is untested against any live merge tool. It's
   harmless if your ILS matches ISBNs canonically and only matters if it
   matches them literally.
-- No PyPI release. For the stated audience, small-library staff with no
-  budget, `git clone && pip install -e .` is a harder ask than it looks.
+- The class-fallback map is tuned to a religious-studies collection. It works
+  as a documented worked example, but retrocat has never been run against a
+  collection with a genuinely different subject profile, so how much editing
+  that actually takes for an adopter is unmeasured.
