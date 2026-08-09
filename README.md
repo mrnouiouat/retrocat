@@ -27,7 +27,7 @@ I'd rather you know the boundaries up front.
 The MARC field mapping is **sandbox-validated**. The ILS vendor's support team
 loaded a 17-record pilot file into their sandbox and confirmed it produced
 correct resources and copies, down to call number, barcode, location, and
-status. The specifics are in [docs/VALIDATION.md](docs/VALIDATION.md).
+status. The specifics are in [docs/VALIDATION.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/VALIDATION.md).
 
 The seminary's backfill itself is underway, not finished. The pilot and the
 first shelf are done. What I can tell you about speed is that once a shelf is
@@ -43,7 +43,7 @@ every book identically to the internal tool and produced 30 of 32 identical
 call numbers. The two that differed were books whose subject class had to be
 guessed because Google Books happened to be down during the run, and both were
 flagged by retrocat's own review digest. That's written up in
-[docs/VALIDATION.md](docs/VALIDATION.md) under "Reproduction check".
+[docs/VALIDATION.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/VALIDATION.md) under "Reproduction check".
 
 ## What it does
 
@@ -281,7 +281,7 @@ Five steps from clone to your first shelf:
 3. Describe your barcode scheme in `[barcodes]`, or set
    `valid_new_ranges = []` if you don't have one.
 4. Scan one shelf, two lines per book, ISBN then barcode. See
-   [docs/OPERATOR-GUIDE.md](docs/OPERATOR-GUIDE.md) for the two-sweep method
+   [docs/OPERATOR-GUIDE.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/OPERATOR-GUIDE.md) for the two-sweep method
    that keeps that from being tedious. Then run `retrocat shelf` on it.
 5. Read `output/<shelf>/master_table.csv`, fill in `manual/<shelf>.csv`, and
    once every shelf is done, `retrocat final` builds the one file to
@@ -326,19 +326,19 @@ A few things worth knowing before you start:
   consecutive connection failures and the run carries on with the other two
   sources.
 - **One ILS.** Every sandbox claim here involves a single vendor's importer.
-  [docs/VALIDATION.md](docs/VALIDATION.md) is specific about what that does
+  [docs/VALIDATION.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/VALIDATION.md) is specific about what that does
   and doesn't cover.
 
 ## Project docs
 
-- [docs/DESIGN.md](docs/DESIGN.md): data contracts, classification rules, and
+- [docs/DESIGN.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/DESIGN.md): data contracts, classification rules, and
   the edge-case reasoning behind them
-- [docs/OPERATOR-GUIDE.md](docs/OPERATOR-GUIDE.md): the shelf-by-shelf capture
+- [docs/OPERATOR-GUIDE.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/OPERATOR-GUIDE.md): the shelf-by-shelf capture
   process for actually running a backfill
-- [docs/VALIDATION.md](docs/VALIDATION.md): what's been validated, and how
-- [DECISIONS.md](DECISIONS.md): the design decisions behind the generalized
+- [docs/VALIDATION.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/VALIDATION.md): what's been validated, and how
+- [DECISIONS.md](https://github.com/mrnouiouat/retrocat/blob/main/DECISIONS.md): the design decisions behind the generalized
   version, and why each one went the way it did
-- [CHANGELOG.md](CHANGELOG.md): what changed between releases
+- [CHANGELOG.md](https://github.com/mrnouiouat/retrocat/blob/main/CHANGELOG.md): what changed between releases
 
 ## License
 

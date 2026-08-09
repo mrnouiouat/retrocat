@@ -8,6 +8,18 @@ Design reasoning lives in [DECISIONS.md](DECISIONS.md), which explains *why*
 the pipeline works the way it does. This file only records what changed
 between releases.
 
+## [0.1.2] - 2026-08-09
+
+### Fixed
+
+- Every documentation link in the README was repo-relative. That works on
+  GitHub, but the README is also the PyPI long description, where a relative
+  target resolves against `pypi.org/project/retrocat/` and 404s. Anyone
+  arriving from `pip install retrocat` found all nine pointers dead, including
+  all four references to `docs/VALIDATION.md`, which is where the evidence for
+  the README's claims actually lives. All documentation links are now absolute
+  URLs.
+
 ## [0.1.1] - 2026-08-09
 
 Packaging and metadata only. No change to pipeline behavior, and the 285
@@ -59,5 +71,6 @@ First public release.
 - Configuration through `config.toml`, covering library identity, barcode
   scheme, catalog column mapping, and output filename.
 
+[0.1.2]: https://github.com/mrnouiouat/retrocat/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/mrnouiouat/retrocat/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mrnouiouat/retrocat/releases/tag/v0.1.0

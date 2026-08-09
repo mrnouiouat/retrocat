@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "retrocat"
-version = "0.1.1"
+version = "0.1.2"
 description = "Retrospective conversion cataloging: paired ISBN/barcode scans -> validated MARC21 for bulk import into a library ILS"
 readme = "README.md"
 license = "MIT"
