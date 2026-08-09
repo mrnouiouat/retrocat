@@ -1,273 +1,227 @@
-# DECISIONS.md — design calls made while building retrocat
+# Design decisions
 
-Running log of design decisions and deviations from `RETROCAT-HANDOFF.md`
-(which lives in the source repo, not here). Newest entries at the bottom of
-each phase section. Kept per the handoff's Authority section: this is the
-record the owner reads instead of re-deriving the reasoning.
+retrocat is a clean-room generalization of an internal tool I built for one
+library's retrospective conversion. Every institution-specific fact in that
+tool had to become either a config value, a shipped-and-overridable data file,
+or nothing at all. This is the record of the calls I made doing that, and why,
+so nobody (including me, later) has to re-derive them from the diff.
 
-## Phase 1 — skeleton (2026-08-08)
+Organized by area rather than chronologically. Everything here landed
+2026-08-08 and 2026-08-09.
 
-- **Cloned the existing GitHub repo** rather than `git init`, per the amended
-  handoff. Branch `main`; the placeholder 35-byte `README.md` stays until
-  Phase 8 overwrites it.
-- **LICENSE copyright holder is the GitHub handle `thefirstsamurai`**, not a
-  legal name — no confirmed real name was available to the build session, and
-  guessing one from an email address seemed worse than the handle. Swap in a
-  real name whenever; one-line change.
-- `.gitignore` carried over from the source repo verbatim (the handoff calls
-  it correct). `output/` and `.cache/` stay ignored for the same reasons as
-  the source repo: regenerable vs. precious-but-local.
-- `pyproject.toml` includes a `[tool.setuptools.package-data]` entry for
-  `retrocat/data/*.toml` ahead of Phase 5, where the class-fallback subject
-  mapping becomes a shipped, overridable data file.
-- Version starts at `0.1.0` (the source repo says `1.0.0`, but that number
-  described the *internal* tool's maturity; the generalized package has not
-  yet earned it).
+## Scope and packaging
 
-## Phase 2 — isbn.py and lc_call.py (2026-08-08)
+**Version starts at 0.1.0.** The internal tool called itself 1.0.0, but that
+number described *its* maturity against one library's data. The generalized
+package hasn't earned it yet, and I'd rather under-claim in metadata that
+people read as a promise.
 
-- Ported verbatim except import paths and the `isbn.py` docstring, which
-  referenced the internal spec file and the internal export's ISBN-10 ratio;
-  now phrased generically (the engineering claim is unchanged).
-- **ISBN tests got their own `tests/test_isbn.py`.** In the source repo they
-  live inside `test_catalog.py`; splitting them means Phase 2 lands with a
-  green suite before `catalog.py` exists. Added a small `extract_isbns` test
-  class (the function was only covered indirectly before). The catalog-loading
-  tests move over with `catalog.py` in Phase 4.
-- One fixture string in `test_lc_call.py` replaced: a real organization name
-  used to exercise leading-article skipping became "The Riverside Historical
-  Society" — it was test data, not a bibliographic fact, so the keep-real-data
-  exception did not apply. Real corporate *authors* (e.g. El-Falah Foundation)
-  stay, per the locked fixtures decision.
-- 56 tests passing at this checkpoint.
+**`retrocat/data/*.toml` ships as package data.** The class-fallback subject
+map is a data file rather than a Python constant, so a library can override it
+without touching source. That decision shaped `pyproject.toml` before the map
+itself existed.
 
-## Phases 3+4 — config.py, parse_scans.py, catalog.py, classify.py (2026-08-08)
+**The LICENSE copyright holder is a GitHub handle, not a legal name.** I
+didn't have a confirmed real name to put there when I first pushed, and
+inventing one from an email address seemed worse than the handle. This is a
+one-line fix and it should get made.
 
-### config.py design calls
+## Configuration
 
-- **Unknown config keys are hard errors**, not warnings. A typo like
-  `home_libary` silently reverting to a default is the same failure class as
-  a renamed export column silently disabling dedup — the project's whole
-  posture is that misconfiguration must be loud.
-- **Barcode length 10 or 13 is rejected at load** — it would make scan lines
-  ambiguous against ISBN classification. Any other length works.
-- `[barcodes].min`/`max` are optional (absent = any all-digit token of the
-  configured length is a barcode). `valid_new_ranges` is a list of `[lo, hi]`
-  pairs; **empty list = collision-range check disabled entirely**, per the
-  handoff's requirement that a library with no barcode scheme can switch it
-  off. The check lives on `BarcodeConfig.is_valid_new_barcode`, replacing the
-  source repo's `barcode_in_valid_new_range` + hardcoded sticker-roll
-  constants (not ported, as instructed).
-- `[catalog.columns].isbn` and `.barcode` are required non-empty; `title`,
-  `author`, `call_number` default to their conventional names; `resource_id`
-  and `type` default to `""` (= my export doesn't have this). An empty
-  `call_number` sets `ExistingCatalog.has_call_numbers = False`, which
-  `reconcile.py` will surface explicitly in Phase 5 instead of emitting
-  silent blanks.
-- `marc_language` is length-checked at config load (3 chars) *and* will be
-  re-checked at MARC build time — a wrong-length code corrupts the fixed-
-  length 008 field silently, so both ends stay paranoid.
-- `--config` (Phase 6) will default to `./config.toml`; the missing-file
-  error points at `sample/config.toml`.
+The theme across all of these: misconfiguration has to be loud. The failure
+mode this project exists to prevent is a run that *looks* clean and quietly
+does the wrong thing.
 
-### Port deviations
+**Unknown config keys are hard errors, not warnings.** A typo like
+`home_libary` reverting to a default is the same class of bug as a renamed
+export column silently disabling dedup. Neither one shows up in any count.
 
-- **Kept the "barcode on record but record has no ISBN → ALREADY_DONE"
-  branch that the handoff calls unreachable.** Against the current code it
-  IS reachable: `catalog.py` maps a barcode to an *empty* ISBN set whenever
-  an export row has a barcode but no usable ISBN (common in messy exports),
-  and `classify._classify_pair` then takes the `if not on_record:` branch.
-  There is a test proving it (`test_barcode_on_record_but_record_has_no_isbn`).
-  Flagging per the handoff's "the code wins" rule rather than silently
-  deviating; nothing was dropped.
-- **Catalog header validation added** as specified: every configured column
-  name is checked against the real header row before any row is read;
-  missing columns abort listing both the configured names and the actual
-  header. Covers the `Type` filter the same way (configured-but-absent
-  aborts; unconfigured = filter off, documented as "my export contains only
-  books").
-- Ported tests replace the source repo's real sticker-range values with a
-  generic 5xxxxx scheme (institution range facts are institution data, even
-  in test constants). The classify tests now also cover: range note built
-  from config, range check disabled, blank type value kept, type filter off.
-- `test_config.py` loads `sample/config.toml` in the suite, so the shipped
-  sample can never drift into invalidity.
-- 140 tests passing at this checkpoint.
+**Catalog column names are validated against the real header row** before a
+single row is read, and a mismatch aborts with both the configured names and
+the actual header printed side by side. If your export calls the column
+`isbn13` and your config says `ISBN`, dedup matches nothing, every book
+classifies as new, and the totals still balance perfectly. There is no way to
+catch that downstream, so it gets caught at load.
 
-## Phase 5 — lookup, language, marc_build, reconcile, manual (2026-08-08)
+**`[catalog.columns].isbn` and `.barcode` are required and non-empty.**
+`title`, `author`, and `call_number` fall back to conventional names.
+`resource_id` and `type` default to empty, meaning "my export doesn't have
+this column." An empty `call_number` sets `ExistingCatalog.has_call_numbers =
+False`, and `reconcile.py` then writes an explicit "(export has no
+call-number column)" in every row rather than a blank cell that would read as
+"this book has no call number on record."
 
-- **The class-fallback map ships as `src/retrocat/data/lc_class_map.toml`**
-  (packaged via `[tool.setuptools.package-data]`), loaded with `tomllib`,
-  which preserves document order — order is semantic (first keyword found
-  wins; narrower keys are written before words they contain). The file also
-  carries `default_class` (the last-resort LC class, formerly the
-  `DEFAULT_LC_CLASS` constant), so the whole "where does an unclassifiable
-  book go" policy lives in one overridable file. Override hook:
-  `[lookup].class_map_file` in config.toml. The shipped map keeps the
-  religious-studies Tier 1 as a documented worked example, per the handoff.
-- `_class_fallback` became the module-level `class_fallback(class_map, ...)`
-  so tests and future tools can use it without a client.
-- **`language.py` no longer owns a default language.** `DEFAULT_LANGUAGE`
-  was deleted; `marc_build._field_008` takes the default from
-  `[library].marc_language` per the backport instruction. Both config load
-  and MARC build validate the 3-character shape.
-- **`marc_build` dropped the `include_location_status` flag.** Location and
-  status subfields (852 $c / 876 $j) are emitted iff the config values are
-  non-empty — "blank config = let the ILS default" replaces a boolean that
-  existed to reproduce the pilot's shape. The golden fixture regeneration in
-  Phase 7 will use blank location/status for the pilot-shaped records.
-- `reconcile.py`: when the export has no call-number column, every row's
-  `existing_call_number` reads `"(export has no call-number column)"` and
-  `needs_fix` stays False — an explicit statement instead of a blank that
-  would read as "this book has no call number on record". A warning is
-  logged once per run.
-- `manual.py` takes `default_lc_class` as an explicit parameter (the
-  pipeline passes the loaded class map's default) rather than importing a
-  constant.
-- Vendor/institution names stripped from comments while keeping the
-  technical reasoning (dual-020 insurance, sandbox validation, LoC
-  unreachability) exactly as the handoff prescribed.
-- `test_manual.py`'s end-to-end section (which drives `run_pipeline`) is
-  deferred to Phase 6 with the pipeline itself; everything else ported.
-- 243 tests passing at this checkpoint.
+**A barcode length of 10 or 13 is rejected at config load.** Those lengths
+make a scan line ambiguous against ISBN classification, and the parser's whole
+contract is that a token's type is decidable from the token. Any other length
+is fine.
 
-## Phase 6 — pipeline.py and __main__.py (2026-08-08)
+**`valid_new_ranges = []` disables the new-sticker range check entirely.** The
+internal tool hardcoded one library's sticker-roll constants. Plenty of small
+libraries have no barcode scheme at all, so the check had to be switchable off
+rather than merely configurable. `[barcodes].min`/`max` are separately
+optional; absent means any all-digit token of the configured length counts.
 
-- Straight port as amended: `_conflict_gate`, `--allow-conflicts`,
-  stale-`.mrc` removal, and both gate test classes carried over intact. The
-  only behavior change is the prescribed one — conflict range text comes
-  from config (`BarcodeConfig.describe_ranges`), tested in
-  `test_conflict_note_carries_configured_ranges`.
-- `run_pipeline` takes a required `config: Config` and threads it everywhere;
-  `mrc_name=None` now means "use `[output].mrc_filename`". The class map is
-  loaded once per run (respecting `[lookup].class_map_file`) and feeds both
-  the lookup client and the manual-entry default class.
-- CLI: `--config` on both subcommands, default `./config.toml`; `ConfigError`
-  and the new `CatalogError` (header validation) exit 1 with a clean message
-  like the other expected failures. The `final` subcommand's output filename
-  comes from config instead of a hardcoded institution name.
-- The source repo's `test_manual.py` end-to-end section became
-  `tests/test_pipeline_manual.py` (it drives `run_pipeline`, so it belongs
-  with the pipeline tests, and keeps `test_manual.py` import-light).
-- 258 tests passing at this checkpoint.
+**`marc_language` is length-checked twice**, at config load and again at MARC
+build time. A wrong-length language code shifts every position after 35 in the
+fixed-length `008` field and corrupts it silently, so both ends stay paranoid
+about it.
 
-## Phase 7 — sample data, golden fixture, hermetic e2e (2026-08-09)
+## Classification and parsing
 
-- **`sample/catalog_export.csv`** (58 rows): title/author/ISBN trios are real
-  bibliographic facts drawn from the source library's export (allowed per
-  the locked fixtures decision); resource IDs, barcodes (5000xx), home
-  library ("Anytown College Library"), and junk-row values are synthetic.
-  33/58 ISBN cells stored in ISBN-10 form so canonicalization is
-  demonstrated, not claimed. All the specified junk cases are present:
-  invalid-length ISBN, call-number-shaped barcode cell, multi-value `;`
-  ISBN cell, a barcode-like call number, a no-ISBN row, and two non-Book
-  rows. Generator script kept in the session scratchpad only (one-shot,
-  reads the private export — must not enter this repo).
-- **`sample/scans/`** (shelf-a, shelf-b) exercises ALREADY_DONE (ISBN-10 vs
-  EAN canonical agreement), MERGE_CANDIDATE with dual 020, CREATE,
-  same-ISBN-twice multi-copy, cross-shelf multi-copy (9780199836741 on both
-  shelves), and a lone barcode. The CONFLICT case lives in a separate
-  `sample/conflict-demo.txt` — a conflict inside shelf-a would block its
-  `.mrc` by design and break the 60-second happy-path demo.
-- **Golden fixture**: pilot ISBNs/titles/authors kept; barcodes renumbered
-  500148–500167; the export dependency replaced with a 4-row synthetic
-  `pilot_catalog_export.csv` holding exactly the merge-candidate ISBNs
-  (two in ISBN-10-only form, reproducing the canonicalization
-  reclassification the source repo documents as deltas). The `.mrc` is
-  regenerated from the pipeline (`scripts/regen_golden.py`) and compared
-  **byte-for-byte** — simpler and stricter than the source repo's
-  delta-tolerant comparison, which existed only because its reference file
-  predated the amended rules. Field-level behavioral assertions ride
-  alongside so the golden file can't decay into a self-fulfilling snapshot.
-  `tests/fixtures/README.md` rewritten honestly (structural golden file,
-  not the vendor-accepted bytes); `docs/VALIDATION.md` records what was
-  sandbox-validated without names/URLs/dates.
-- **Deviation (bug fix): `unfilled_manual.csv` now lists only genuinely
-  unfilled books.** The source repo writes every MANUAL-bucket book to the
-  final run's leftover report, including ones already resolved from a
-  filled worklist (as blank rows) — contradicting its own spec ("Unfilled
-  rows ... are listed in unfilled_manual.csv"). `_write_manual_worklist`
-  takes a `resolved` barcode set and skips them. Shelf runs are unaffected
-  (they pass no filled entries). Worth backporting to the source repo.
-- CLI tests (`test_cli_sample.py`) drive the real `main(argv)` over a copy
-  of `sample/` with `pipeline.LookupClient` monkeypatched — the documented
-  two-command flow (shelf → fill worklist → final), the conflict-gate exit
-  code, `--allow-conflicts`, config errors, and the header-validation abort.
-- 272 tests passing at this checkpoint.
+**I kept a branch the original spec called unreachable.** The spec said
+"barcode on record but the record has no ISBN → ALREADY_DONE" could never
+fire. Against the actual code it fires readily: `catalog.py` maps a barcode to
+an *empty* ISBN set whenever an export row has a barcode but no usable ISBN,
+which is common in messy exports, and `classify._classify_pair` then takes the
+`if not on_record:` branch. There's a test proving it
+(`test_barcode_on_record_but_record_has_no_isbn`). When the code and the spec
+disagree about what's reachable, the code wins and the spec gets amended.
 
-## Phase 8 — README and docs (2026-08-09)
+**Conflict-range text comes from config.** The internal tool's conflict note
+quoted its own hardcoded sticker ranges. `BarcodeConfig.describe_ranges` now
+generates that sentence from whatever the adopting library configured, tested
+in `test_conflict_note_carries_configured_ranges`.
 
-- **The README's demo output is genuine.** Before writing it, the real CLI
-  was run live over `sample/` (shelf → fill worklist → final) from a scratch
-  directory. OpenLibrary and LoC resolved every book — including an LoC
-  call number Google/OpenLibrary lacked — even though Google Books was
-  unavailable during the run, which is itself a live demonstration of the
-  per-source degradation. The quoted console output, master-table rows, and
-  decoded MARC record are from that run (Google's failure warnings omitted;
-  they were caused by a stale environment artifact on the build machine,
-  not something a stranger would see).
-- **The numbers stay honest per the resolved open question**: the README's
-  "Status, honestly" section states the sandbox validation, states the full
-  backfill is *in progress, not finished*, and frames throughput as
-  projected ("import-ready MARC in minutes once a shelf is scanned"), never
-  as an achieved 150-hours-saved claim.
-- Institution named in the README narrative only (hook + status), per the
-  locked decision. No URL invented for it. Everything else in the repo
-  stays generic; the final sweep's only other hit is the class map's
-  generic "religious-studies (Islamic seminary) library" collection
-  descriptor, which names no institution.
-- `docs/OPERATOR-GUIDE.md` generalizes the source repo's process doc: the
-  two-sweep capture method, triage flow, gates, and a sandbox checklist
-  that folds in the merge-behavior nuance the original deployment learned
-  (resource-level fields adopt the incoming record; pre-existing copies
-  keep their old copy-level call numbers — flagged as a post-import cleanup
-  item, ILS-neutrally).
-- `docs/DESIGN.md` distills the source `CLAUDE.md`'s data contracts and
-  edge-case reasoning, rewritten generic: config-driven barcode scheme, the
-  header-validation rationale, the full lookup retry/caching policy, and
-  the silent-failure framing (canonicalization and header validation as the
-  same failure class) that is the project's strongest engineering signal.
+## Lookup and the class map
 
-## Post-handoff additions (2026-08-09)
+**The class-fallback map is `src/retrocat/data/lc_class_map.toml`**, loaded
+with `tomllib`, which preserves document order. Order is semantic here: first
+keyword found wins, so narrower keys have to be written before words that
+contain them. The file also carries `default_class`, the last-resort LC class
+that used to be a `DEFAULT_LC_CLASS` constant, which puts the entire "where
+does an unclassifiable book go" policy in one overridable file.
+`[lookup].class_map_file` points at your copy.
 
-- **`unfilled_manual.csv` fix backported to the source repo** — done and
-  pushed there (`d1e6054`), with a regression test; both repos now agree.
-- **Standalone call-number tool: `retrocat callnumber`.** Chosen as a
-  subcommand of the one CLI (rather than a second console script) so the
-  tool is discoverable from `retrocat --help` and there is exactly one
-  entry point to document; it sets `needs_config=False`, so unlike the
-  pipeline commands it needs no config.toml, no network, and no data files.
-  Three modes: single-shot (`--lc-class/--author/--title/--year/--corporate`),
-  `--cutter WORD`, and `--batch FILE.csv` (appends a `call_number` column,
-  writes to stdout). Batch rows without an `lc_class` get a blank call
-  number and a warning — inferring the subject class is the pipeline's job
-  (it has category signals to work from); the standalone tool never
-  fabricates one. `lc_call.py` itself is untouched — the tool is purely a
-  CLI wrapper, so pipeline and standalone use share one implementation.
-- README gained the standalone-tool section and a five-step "adapting it to
-  your library" quick list ahead of the existing detail bullets;
-  OPERATOR-GUIDE mentions the tool as a reconcile-review aid.
-- **Final verification run (2026-08-09)** on the synthetic sample from a
-  clean scratch directory, through the real CLI with live APIs: both shelf
-  triages, worklist fill, `final` build (8 records, all round-trip),
-  `unfilled_manual.csv` empty with the resolved book excluded, conflict
-  demo blocked with exit 1 + reports written + no `.mrc`, and all three
-  callnumber modes. 285 tests green.
+The shipped map stays tuned to a religious-studies collection rather than being
+neutered into something generic. A worked example that visibly encodes one
+collection's subject profile teaches an adopter what to do with theirs; an
+empty template teaches nothing.
 
-(Both repos pushed: retrocat `main`, source repo `master`.)
+**`class_fallback` is module-level**, taking the class map as a parameter, so
+tests and the standalone tool can call it without constructing a lookup client.
 
-## Adopter dry-run on the source library's real data (2026-08-09)
+**`language.py` no longer owns a default language.** `DEFAULT_LANGUAGE` was
+deleted and `marc_build._field_008` takes the default from
+`[library].marc_language`. A default language is a property of a library's
+collection, not of a code module.
 
-Ran retrocat exactly as a new library would — fresh scratch directory, real
-64-line shelf scan + real ~2,100-row ILS export copied in (never into this
+## MARC build
+
+**I dropped the `include_location_status` boolean.** The `852 $c` and `876 $j`
+subfields are now emitted if and only if the corresponding config values are
+non-empty, so "blank config means let the ILS apply its own defaults" replaces
+a flag that existed only to reproduce the pilot's exact shape. One rule, no
+mode.
+
+## Sample data and fixtures
+
+**`sample/catalog_export.csv` mixes real bibliographic facts with synthetic
+everything-else.** Titles, authors, and ISBNs are real books, which matters
+because the sample scans have to resolve against live APIs for the demo to be
+honest. Resource IDs, barcodes (500xxx), the library name, and the junk-row
+values are invented. 33 of 58 ISBN cells are stored in ISBN-10 form, so
+canonicalization is demonstrated by the sample rather than merely asserted in
+prose. All the junk cases an adopter will actually hit are present: an
+invalid-length ISBN, a call-number-shaped value in the barcode cell, a
+multi-value `;` ISBN cell, a barcode-shaped call number, a row with no ISBN,
+and two non-book rows.
+
+**The two sample shelves cover the interesting paths** between them:
+ALREADY_DONE via ISBN-10-vs-EAN canonical agreement, a MERGE_CANDIDATE with
+dual `020`s, plain CREATEs, the same ISBN twice on one shelf, the same ISBN
+across two shelves, and a lone barcode.
+
+**The CONFLICT case lives in its own `sample/conflict-demo.txt`.** A conflict
+inside `shelf-a` would block that shelf's `.mrc` by design, which is correct
+behavior and a terrible first-run experience.
+
+**The golden `.mrc` is regenerated from the pipeline and compared
+byte-for-byte.** The internal repo compared its golden file with a list of
+tolerated deltas, but only because its reference file predated a set of rule
+amendments. Starting clean, there's no reason to carry that tolerance, and
+byte equality is both simpler and stricter. Field-level behavioral assertions
+run alongside it so the golden file can't decay into a snapshot that merely
+agrees with whatever the code currently does. `scripts/regen_golden.py`
+regenerates it deliberately.
+
+The golden file keeps the pilot's real ISBNs, titles, and authors, with
+barcodes renumbered to 500148–500167 and the catalog dependency replaced by a
+4-row synthetic export holding exactly the merge-candidate ISBNs, two of them
+in ISBN-10-only form. That reproduces the canonicalization reclassification
+that motivated the whole design.
+
+**The vendor-accepted bytes are not in this repo.** What's here is a
+structurally identical file regenerated from the pipeline.
+`tests/fixtures/README.md` and `docs/VALIDATION.md` both say so plainly rather
+than letting a reader assume the golden file is the artifact the vendor
+loaded.
+
+## A bug I found while porting
+
+**`unfilled_manual.csv` listed books that weren't unfilled.** The internal tool
+wrote every book in the MANUAL bucket to the final run's leftover report,
+including ones already resolved from a filled worklist, which showed up as
+blank rows. That contradicts its own spec ("unfilled rows are listed in
+unfilled_manual.csv") and it makes the report actively misleading at the exact
+moment an operator is using it to decide whether they're done.
+`_write_manual_worklist` now takes a set of resolved barcodes and skips them.
+Shelf runs are unaffected, since they pass no filled entries. Fixed here and
+backported to the internal tool.
+
+## The standalone call-number tool
+
+**`retrocat callnumber` is a subcommand, not a second console script.** As a
+subcommand it's discoverable from `retrocat --help` and there's exactly one
+entry point to document. It sets `needs_config=False`, so unlike the pipeline
+commands it needs no `config.toml`, no network, and no data files.
+
+Three modes: single-shot (`--lc-class/--author/--title/--year/--corporate`),
+`--cutter WORD`, and `--batch FILE.csv`, which appends a `call_number` column
+and writes to stdout.
+
+**Batch rows with no `lc_class` get a blank call number and a warning.**
+Inferring a subject class is the pipeline's job, because the pipeline has
+vendor category signals to work from. The standalone tool has nothing to infer
+from, so it declines rather than guessing.
+
+`lc_call.py` itself is untouched by all of this. The tool is a CLI wrapper, so
+pipeline and standalone share one implementation of the Cutter algorithm.
+
+## Verification
+
+**The README's demo output is from a real run**, not composed. I ran the CLI
+over `sample/` from a scratch directory, shelf through worklist through final,
+and quoted what came out. Google Books was unavailable during that run and
+OpenLibrary and LoC resolved every book anyway, including one call number the
+other two lacked, which is an unplanned live demonstration of the per-source
+degradation. I omitted Google's failure warnings from the quoted output
+because they came from a stale environment artifact on my machine rather than
+anything a stranger would see.
+
+**The adopter dry-run used the source library's real data.** Fresh directory,
+real 64-line shelf scan and real 2,100-row export copied in (never into this
 repo), `config.toml` copied from the sample and edited in four places, cold
-cache, live APIs. Full flow: shelf triage → worklist (the operator's real
-hand-entered title survived the merge) → final build (32 records, all
-round-trip, nothing unfilled). Then diffed row-by-row against the original
-internal pipeline on the same data: identical classifications, 30/32
-identical call numbers, with every divergence traced to Google Books being
-unavailable during the cold run (details now in docs/VALIDATION.md,
-"Reproduction check"). One real caveat surfaced and documented there: the
-008 language signal often comes only from Google, so Google-down runs stamp
-the default language on non-English books — the worklist `language` column
-is the hand-fix.
+cache, live APIs. Full flow, including the operator's real hand-entered
+worklist title surviving the merge. Then diffed row by row against the
+internal pipeline on the same data: identical classifications, 30 of 32
+identical call numbers, every divergence traceable to Google being down.
+Details in `docs/VALIDATION.md` under "Reproduction check."
+
+That run surfaced a real caveat worth repeating here: **the `008` language
+signal often comes only from Google Books**, since LoC misses many small-press
+titles. A Google-down run stamps the configured default language on
+non-English books. The worklist's `language` column is the hand-fix, and it's
+why that column exists.
+
+## Open items
+
+- Put a real legal name in the LICENSE.
+- Multi-copy grouping is structurally tested but has never been through a live
+  import, because the pilot contained no multi-copy book. Someone needs to
+  confirm one in an ILS sandbox before a full production import.
+- The dual-`020` merge insurance is untested against any live merge tool. It's
+  harmless if your ILS matches ISBNs canonically and only matters if it
+  matches them literally.
+- No PyPI release. For the stated audience, small-library staff with no
+  budget, `git clone && pip install -e .` is a harder ask than it looks.

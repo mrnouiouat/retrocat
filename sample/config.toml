@@ -1,13 +1,13 @@
-# retrocat configuration — copy this file next to your data, edit, and pass
+# retrocat configuration. Copy this file next to your data, edit it, and pass
 # it with --config (or leave it named config.toml in the directory you run
 # from). Every value here is validated at startup; typos in key names are
-# hard errors, not silent defaults.
+# hard errors rather than silent defaults.
 
 [library]
-# Required. Stamped into every MARC holdings field (852 $b) — your ILS
-# matches it against a library name it already knows about.
+# Required. Stamped into every MARC holdings field (852 $b). Your ILS matches
+# it against a library name it already knows about.
 home_library = "Anytown College Library"
-# Optional shelving location / item status, stamped per copy (852 $c and
+# Optional shelving location and item status, stamped per copy (852 $c and
 # 876 $j). Leave blank to let your ILS apply its import defaults.
 location = "Main Campus"
 status = "Available"
@@ -17,34 +17,35 @@ marc_language = "eng"
 
 [barcodes]
 # Your item-barcode scheme. Scan lines of exactly `length` digits are
-# classified as barcodes (10- and 13-digit lines are ISBNs — a barcode
-# length of 10 or 13 is therefore rejected at startup).
+# classified as barcodes. Since 10- and 13-digit lines are ISBNs, a barcode
+# length of 10 or 13 is rejected at startup.
 length = 6
-# Optional inclusive bounds for what counts as a plausible barcode at all;
-# a `length`-digit scan line outside them is a hard parse error (it is
-# probably a misread). Omit both to accept any `length`-digit number.
+# Optional inclusive bounds for what counts as a plausible barcode at all. A
+# `length`-digit scan line outside them is a hard parse error, on the theory
+# that it is probably a misread. Omit both to accept any `length`-digit
+# number.
 min = 500000
 max = 599999
 # Ranges a NEW sticker may legitimately carry, as [lo, hi] inclusive pairs.
-# Used to catch impossible numbers on fresh stickers (e.g. a barcode from a
-# roll your library never bought). If your unused sticker roll has gaps —
-# numbers already stuck on books out of sequence — list the free runs on
-# either side of each gap. Leave the list empty ([]) to disable the check
+# Used to catch impossible numbers on fresh stickers, such as a barcode from
+# a roll your library never bought. If your unused sticker roll has gaps,
+# meaning numbers already stuck on books out of sequence, list the free runs
+# on either side of each gap. Leave the list empty ([]) to disable the check
 # entirely if your library has no sticker-number scheme.
 valid_new_ranges = [[500100, 599999]]
 
 [catalog]
-# Rows whose type column (below) differs from this value are skipped —
-# collections, DVDs, equipment records, etc.
+# Rows whose type column (below) differs from this value are skipped:
+# collections, DVDs, equipment records, and so on.
 book_type = "Book"
 
 [catalog.columns]
 # Map retrocat's fields to YOUR export's exact column headers. These names
-# are validated against the file's real header row at load time; a missing
-# column aborts the run with a list of what was not found. This is
-# deliberate: with a wrong ISBN column name every book would classify as
-# new and the dedup that is the entire point of the tool would silently
-# stop working.
+# are validated against the file's real header row at load time, and a
+# missing column aborts the run with a list of what was not found. That is
+# deliberate: with a wrong ISBN column name every book would classify as new
+# and the dedup that is the entire point of the tool would silently stop
+# working.
 isbn = "ISBN"                # required
 barcode = "Barcode"          # required
 title = "Title"
@@ -57,9 +58,9 @@ type = "Type"                # optional: the resource-type column; set to ""
                              # if your export contains only books
 
 [lookup]
-# Optional: path to your own LC class-fallback map (copy and edit
-# src/retrocat/data/lc_class_map.toml — the shipped one is a worked example
-# tuned to a religious-studies collection). Leave blank to use the shipped
+# Optional: path to your own LC class-fallback map. Copy and edit
+# src/retrocat/data/lc_class_map.toml; the shipped one is a worked example
+# tuned to a religious-studies collection. Leave blank to use the shipped
 # map.
 class_map_file = ""
 
