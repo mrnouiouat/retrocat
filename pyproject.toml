@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,12 +7,46 @@ name = "retrocat"
 version = "0.1.0"
 description = "Retrospective conversion cataloging: paired ISBN/barcode scans -> validated MARC21 for bulk import into a library ILS"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
+authors = [{ name = "mrnouiouat" }]
+keywords = [
+    "marc",
+    "marc21",
+    "cataloging",
+    "library",
+    "ils",
+    "pymarc",
+    "library-science",
+    "metadata",
+    "isbn",
+    "retrospective-conversion",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Education",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Text Processing",
+    "Topic :: Utilities",
+]
 dependencies = [
     "pymarc>=5.0",
     "requests>=2.31",
 ]
+
+[project.urls]
+Homepage = "https://github.com/mrnouiouat/retrocat"
+Repository = "https://github.com/mrnouiouat/retrocat"
+Issues = "https://github.com/mrnouiouat/retrocat/issues"
+Changelog = "https://github.com/mrnouiouat/retrocat/blob/main/DECISIONS.md"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

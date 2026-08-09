@@ -1,6 +1,8 @@
 # retrocat
 
 [![tests](https://github.com/mrnouiouat/retrocat/actions/workflows/tests.yml/badge.svg)](https://github.com/mrnouiouat/retrocat/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/retrocat)](https://pypi.org/project/retrocat/)
+[![Python](https://img.shields.io/pypi/pyversions/retrocat)](https://pypi.org/project/retrocat/)
 
 retrocat turns barcode-scanner output into MARC21 records you can bulk-import
 into a library ILS. You scan a shelf (ISBN, then item barcode, two lines per
@@ -125,12 +127,27 @@ in it. The book goes on the worklist for a person to identify.
 ## Setup
 
 ```bash
+pip install retrocat
+```
+
+That gets you the `retrocat` command. You also need a `config.toml`, and the
+easiest way to get a commented one to edit is to grab the template from this
+repo:
+
+```bash
+curl -O https://raw.githubusercontent.com/mrnouiouat/retrocat/main/sample/config.toml
+```
+
+Optionally put a `GOOGLE_BOOKS_API_KEY` in a `.env` file next to it, which
+raises your rate limits.
+
+If you'd rather work from a clone, which also gets you the sample data used
+below:
+
+```bash
 git clone https://github.com/mrnouiouat/retrocat
 cd retrocat
 pip install -e .
-
-cp .env.example .env                # optional: add GOOGLE_BOOKS_API_KEY
-cp sample/config.toml config.toml   # then edit for your library
 ```
 
 Everything library-specific lives in `config.toml`: your library's name and
@@ -256,7 +273,8 @@ build_call_number`.
 
 Five steps from clone to your first shelf:
 
-1. `pip install -e .` and copy `sample/config.toml` next to your data.
+1. `pip install retrocat` and put a copy of `sample/config.toml` next to your
+   data.
 2. Export your catalog from your ILS as CSV and put your export's exact column
    headers in `[catalog.columns]`. retrocat aborts with a clear list if they
    don't match the file.
