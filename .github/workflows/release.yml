@@ -95,16 +95,17 @@ jobs:
           path: dist/
 
       # `gh release upload` requires the release to exist, so create it first
-      # if the tag was pushed without one.
+      # if the tag was pushed without one. No --repo here: gh resolves the
+      # repo from the checkout, and --notes-from-tag is rejected when --repo
+      # is passed.
       - name: Create the GitHub release if it does not exist
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             echo "release $GITHUB_REF_NAME already exists"
           else
             gh release create "$GITHUB_REF_NAME" \
-              --repo "$GITHUB_REPOSITORY" \
               --title "retrocat ${GITHUB_REF_NAME#v}" \
               --notes-from-tag
           fi
@@ -112,4 +113,4 @@ jobs:
       - name: Upload artifacts to the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+        run: gh release upload "$GITHUB_REF_NAME" dist/* --clobber
