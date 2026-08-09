@@ -30,6 +30,17 @@ the projected cost of the whole backfill is roughly the shelf-scanning time
 plus a manual worklist for the handful of books no API can identify, instead
 of months of per-book data entry.
 
+**retrocat itself is tested against that real deployment.** Beyond the 285
+offline tests, this generalized tool was configured from scratch using
+exactly the "Adapting it to your library" steps below and run end-to-end on
+the source library's real data — the actual shelf scan, the actual
+~2,100-row ILS export, the operator's actual hand-filled worklist. It
+reproduced the internal tool's output row-for-row: identical
+classifications on every book, 30/32 identical call numbers, with every
+divergence externally caused (one metadata source was down), flagged by the
+tool's own review digest, and documented in
+[docs/VALIDATION.md](docs/VALIDATION.md) ("Reproduction check").
+
 ## What it does
 
 1. **Parses scan files** (`scans/*.txt`) with an explicit pairing state
