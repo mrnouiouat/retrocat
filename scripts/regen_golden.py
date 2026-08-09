@@ -6,8 +6,8 @@ from the pipeline itself with the same pinned inputs the golden test uses:
 
     python scripts/regen_golden.py
 
-Never regenerate to silence a failing golden test you don't understand —
-the byte comparison exists to catch unintended mapping drift.
+Never regenerate to silence a failing golden test you don't understand.
+The byte comparison exists to catch unintended mapping drift.
 """
 
 from __future__ import annotations
