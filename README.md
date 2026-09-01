@@ -1,349 +1,404 @@
 # retrocat
 
+**Retrospective cataloging for small libraries.**
+
 [![tests](https://github.com/mrnouiouat/retrocat/actions/workflows/tests.yml/badge.svg)](https://github.com/mrnouiouat/retrocat/actions/workflows/tests.yml)
 [![PyPI](https://img.shields.io/pypi/v/retrocat)](https://pypi.org/project/retrocat/)
 [![Python](https://img.shields.io/pypi/pyversions/retrocat)](https://pypi.org/project/retrocat/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/mrnouiouat/retrocat/blob/main/LICENSE)
 
-retrocat turns barcode-scanner output into MARC21 records you can bulk-import
-into a library ILS. You scan a shelf (ISBN, then item barcode, two lines per
-book), run two commands, and get a `.mrc` file plus a report telling you which
-records a human needs to look at.
+[Install and use retrocat](#quick-start) · [Try the sample data](#try-it-with-the-sample-data) · [Use the call-number generator](#standalone-lc-call-number-generator)
 
-![A terminal session: retrocat triages a shelf scan, flags the one book no API
-could identify, and after that title is filled in by hand, builds an
-import-ready MARC file](https://raw.githubusercontent.com/mrnouiouat/retrocat/main/docs/demo.gif)
+retrocat helps libraries catalog their physical collections and bring their online catalogs back into sync without expensive commercial tooling or months of manual entry. Scan each book's ISBN and item barcode, run two commands, and get a MARC21 `.mrc` file ready for your library system, along with a focused worklist for the records that still need a person to look at them.
 
-I wrote it for The Islamic Seminary of America in Richardson, TX. They had
-2,000+ books that had never been cataloged and a plan to type them all in by
-hand over the next four to six months. Their president approved open-sourcing
-the tool afterward, so retrocat is that same pipeline with the
-institution-specific parts pulled out into a config file. If you run a small
-religious or academic library with no budget for commercial cataloging
-software, this is aimed at you.
+The name is short for **retrospective cataloging**: bringing an older or previously uncataloged collection into a modern library system. retrocat can handle a full shelf-by-shelf backfill, but its offline LC call-number generator also works as a standalone tool.
 
-Python 3.11+, two dependencies (`pymarc` and `requests`), and 285 tests that
-run offline in under two seconds.
-
-## What's actually been proven
-
-I'd rather you know the boundaries up front.
-
-The MARC field mapping is **sandbox-validated**. The ILS vendor's support team
-loaded a 17-record pilot file into their sandbox and confirmed it produced
-correct resources and copies, down to call number, barcode, location, and
-status. The specifics are in [docs/VALIDATION.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/VALIDATION.md).
-
-The seminary's backfill itself is underway, not finished. The pilot and the
-first shelf are done. What I can tell you about speed is that once a shelf is
-physically scanned, turning it into import-ready MARC takes minutes, so the
-real cost of the project is shelf-scanning time plus a short worklist of books
-no API can identify.
-
-retrocat, the generalized version, has been tested against that deployment. I
-set it up from scratch following the "Adapting it to your library" steps below
-and ran it on the seminary's actual data: the real shelf scan, the real
-2,100-row ILS export, the operator's real hand-filled worklist. It classified
-every book identically to the internal tool and produced 30 of 32 identical
-call numbers. The two that differed were books whose subject class had to be
-guessed because Google Books happened to be down during the run, and both were
-flagged by retrocat's own review digest. That's written up in
-[docs/VALIDATION.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/VALIDATION.md) under "Reproduction check".
+![A terminal session showing retrocat process one shelf, set aside the book it could not identify, and build the final MARC file after the missing title was filled in](https://raw.githubusercontent.com/mrnouiouat/retrocat/main/docs/demo.gif)
 
 ## What it does
 
-1. **Parses scan files** (`scans/*.txt`) with an explicit pairing state
-   machine. Lone barcodes (books with no ISBN) go to a manual bucket,
-   mispaired scans fail with a file and line number, and every ISBN gets
-   checksum-validated on the way in.
-2. **Dedupes against your existing catalog**, a CSV export from your ILS with
-   the column names mapped in config. All ISBN matching is canonical: ISBN-10s
-   become ISBN-13 before anything is compared. The loader skips real-world
-   export junk (bad ISBN lengths, call numbers sitting in the barcode column,
-   non-book rows) with a log line, and it checks your configured column names
-   against the file's actual header before it reads a single row.
-3. **Classifies every book** into exactly one of `CREATE`, `MERGE_CANDIDATE`,
-   `ALREADY_DONE`, `MANUAL`, or `CONFLICT`, and won't write output unless the
-   bucket counts add back up to the scan count. Conflicts block the MARC write
-   entirely (`--allow-conflicts` once you've reviewed them), and a blocked run
-   deletes any `.mrc` left behind by an earlier one.
-4. **Resolves metadata** (title, author, LC call number, LCCN, language) from
-   Google Books, OpenLibrary, and the Library of Congress SRU endpoint, with
-   response caching and bounded backoff on 429s and 5xxs. Sources fail
-   independently, and a transient error is never cached, so a re-run picks up
-   whatever a flaky API dropped.
-5. **Generates a shelf-able LC call number locally** when no source has one.
-   It infers the LC class from vendor subject categories, builds a Cutter
-   number from the Library of Congress Cutter table (Shelflisting Manual
-   G 63), and appends the year, giving you something like `BP130 .W55 2017`
-   with no network call. Every call number carries its source and a
-   confidence level.
-6. **Builds the MARC21 records** with pymarc: one resource per distinct ISBN,
-   one 852/876 pair per barcode, so a book that turns up on two shelves
-   imports as one resource with two copies. Each record is round-tripped
-   through a MARC reader before it's written.
-7. **Prints a review digest** naming the exact barcodes that need human
-   attention, so you're not reading a 2,000-row spreadsheet hunting for
-   problems.
+retrocat starts with two things most libraries can already produce: a barcode scan of the shelves and a CSV export of the existing catalog. It compares them to work out which books are new, which ones already exist online, which physical copies need to be attached to an existing record, and which records are too uncertain to import automatically.
 
-Step 5 also ships as a standalone command, `retrocat callnumber`, if all you
-want is LC call numbers and none of the pipeline.
+Along the way, it:
 
-## The interesting engineering
+- Validates ISBNs and item barcodes as they are scanned
+- Treats ISBN-10 and ISBN-13 as two forms of the same identifier
+- Reconciles shelf scans against an existing ILS export
+- Looks up titles, authors, languages, LCCNs, and call numbers through Google Books, OpenLibrary, and the Library of Congress
+- Generates an LC call number locally when a source does not provide one
+- Produces one MARC resource with separate holdings for each physical copy
+- Stops conflicts from quietly entering the import
+- Writes a complete audit table and a much shorter manual worklist
 
-The bug this whole project is shaped around is ISBN canonicalization. Catalog
-exports skew heavily toward ISBN-10; barcode scanners read ISBN-13 EANs.
-Compare the raw strings and a book you already own classifies as new, the
-duplicate gets imported, and nothing catches it, because the counts still
-balance and every checksum is valid. When I fixed this in the original tool,
-two books on the pilot shelf quietly moved from CREATE to MERGE_CANDIDATE, which
-is to say two duplicates I had been about to ship. Every comparison in
-retrocat goes through canonical ISBN-13. The catalog header validation is
-there for the same reason: if your export calls the column `isbn13` and your
-config says `ISBN`, dedup silently does nothing and the run still looks
-perfect.
+The routine matching and record-building happen automatically and uncertain records stay visible and wait for a decision.
 
-The scan parser is a state machine with two rules that look inconsistent and
-aren't. Two barcodes in a row is fine, because the second one is a book with
-no ISBN to scan. Two ISBNs in a row is an error, because a barcode never got
-scanned. Both rules came out of watching how scanning actually goes, and both
-are pinned by tests with comments explaining why they shouldn't be "fixed".
+## Why I built it
 
-Cutter generation runs entirely offline, following Shelflisting Manual G 63. I
-checked the table against two independent transcriptions, and the anchor test
-is `cutter("Wills") == "W55"`, which reproduces a real Library of Congress
-call number end to end.
+I built retrocat for a local nonprofit seminary in Richardson, Texas. Its library had more than 2,000 uncataloged books, and the original plan was expected to require four to six months of manual data entry.
 
-Call numbers are tagged by confidence rather than presented as equally
-trustworthy. Numbers from LoC or OpenLibrary are `high`. Ones built from an
-inferred subject class are `low` and show up in the review digest. Books whose
-subject couldn't be inferred at all get their own weakest tier. And when no
-source can produce a title, retrocat doesn't write a record with a placeholder
-in it. The book goes on the worklist for a person to identify.
+The problem went beyond uncataloged books. The existing online catalog had missing or incorrect Library of Congress call numbers, mismatched barcodes, inconsistent ISBN formats, and records that did not reliably reflect what was actually on the shelves. I had to reconcile messy existing data, prevent duplicate records, correct catalog information, and reconnect physical copies to their digital records.
 
-## Requirements
+That unreliable data directly affected students. They used the online catalog to find out whether the library owned a book, whether a copy was available, and where it could be found. Because large parts of the physical collection were missing or incorrectly represented online, they could not trust the catalog to answer those questions.
 
-- Python 3.11+
-- `pymarc` and `requests`, installed automatically
-- Optionally a Google Books API key (see below). Without one the pipeline
-  still runs; anonymous Google quota just throttles the category lookups that
-  feed the call-number fallback.
+retrocat was used to complete a clean **2,227-book catalog import**, bringing the physical collection and digital catalog back into sync. After open-sourcing was approved, I moved the institution-specific values into configuration so other small academic, religious, nonprofit, and community libraries could use the same workflow.
 
-## Setup
+## Quick start
+
+### Before you begin
+
+You will need:
+
+- Python 3.11 or newer
+- A USB barcode scanner, or another way to put one scanned code on each line of a text file
+- A CSV export of the library's existing catalog
+- Access to the MARC import tool in the target ILS
+- A small sandbox or test import before touching the production catalog
+
+The scanner does not need special integration.
+
+### 1. Install retrocat
 
 ```bash
-pip install retrocat
+python -m pip install retrocat
 ```
 
-That gets you the `retrocat` command. You also need a `config.toml`, and the
-easiest way to get a commented one to edit is to grab the template from this
-repo:
+Confirm that the command is available:
 
 ```bash
+retrocat --help
+```
+
+### 2. Make a working folder
+
+On macOS or Linux:
+
+```bash
+mkdir library-backfill
+cd library-backfill
 curl -O https://raw.githubusercontent.com/mrnouiouat/retrocat/main/sample/config.toml
+mkdir scans
 ```
 
-Optionally put a `GOOGLE_BOOKS_API_KEY` in a `.env` file next to it, which
-raises your rate limits.
+On Windows PowerShell:
 
-If you'd rather work from a clone, which also gets you the sample data used
-below:
-
-```bash
-git clone https://github.com/mrnouiouat/retrocat
-cd retrocat
-pip install -e .
+```powershell
+New-Item -ItemType Directory library-backfill
+Set-Location library-backfill
+Invoke-WebRequest https://raw.githubusercontent.com/mrnouiouat/retrocat/main/sample/config.toml -OutFile config.toml
+New-Item -ItemType Directory scans
 ```
 
-Everything library-specific lives in `config.toml`: your library's name and
-holdings values, your barcode scheme (length, plausible range, valid
-new-sticker ranges, or no scheme at all), the column names of your catalog
-export, and the output filename. It's validated loudly at startup. Unknown
-keys and missing columns are hard errors rather than silent defaults.
+Keep `config.toml`, the catalog export, and the `scans` folder together. Run the retrocat commands from this working folder unless you pass explicit paths for them.
 
-## Run it on the sample data
+### 3. Edit `config.toml`
 
-`sample/` has a synthetic 58-row catalog export and two shelf scan files. The
-ISBNs are real, so they resolve against the live APIs. The whole flow:
+The downloaded template is fully commented. Work through it once before scanning a real shelf.
+
+In `[library]`, set:
+
+- `home_library` to the library name your ILS already recognizes
+- `location` and `status` to the values you want written on each copy, or leave them blank and let the ILS apply its import defaults
+- `marc_language` to the three-letter MARC language code that should be used when no source reports one
+
+In `[barcodes]`, describe the library's item barcodes:
+
+- `length` is the number of digits in an item barcode
+- `min` and `max` are optional plausibility checks
+- `valid_new_ranges` lists ranges assigned to unused stickers; set it to `[]` if the library does not have a predictable range
+
+In `[catalog.columns]`, map retrocat's fields to the exact column headings in the CSV export. For example:
+
+```toml
+[catalog.columns]
+isbn = "ISBN"
+barcode = "Barcode"
+title = "Title"
+author = "Author"
+call_number = "Call Number"
+resource_id = "Resource ID"
+type = "Type"
+```
+
+Do not rename the export just to match this example. Change the values in `config.toml` to match the export you actually have. Set an optional column to `""` if it is not present.
+
+retrocat checks these names against the real CSV header before it reads any records. A misspelled ISBN or barcode column stops the run instead of making every book look new.
+
+### 4. Add a Google Books key if you have one
+
+Google Books works anonymously, but its anonymous quota can be slow or heavily rate-limited. A key is optional, but it is worth adding for a large backfill.
+
+Create a file named `.env` in the working folder:
+
+```text
+GOOGLE_BOOKS_API_KEY=your-key-here
+```
+
+OpenLibrary and the Library of Congress do not need keys. The sources fail independently, so one unavailable service does not end the whole run.
+
+### 5. Export the current catalog
+
+Export the existing catalog as CSV and place it in the working folder. The examples below call it `catalog_export.csv`, but the filename can be anything.
+
+The export must include an ISBN column and an item-barcode column. Title, author, call number, internal record ID, and resource type are useful when the ILS makes them available.
+
+retrocat tolerates ordinary export junk such as malformed ISBNs and non-book rows. It logs what it skips so the bad data does not disappear without explanation.
+
+At this point, the folder should look roughly like this:
+
+```text
+library-backfill/
+    config.toml
+    catalog_export.csv
+    .env                  optional
+    scans/
+```
+
+### 6. Scan one shelf
+
+For a book with an ISBN, scan the ISBN first and the library's item barcode second:
+
+```text
+9781565645998
+500101
+9780199836741
+500102
+```
+
+Save the lines as a plain-text file such as `scans/shelf-a.txt`. Use one file per shelf or manageable scanning batch.
+
+If a book has no ISBN, scan only its item barcode. retrocat recognizes it as a local book and sends it to the manual worklist. If an ISBN is missing its following barcode, or a scan does not fit the configured rules, the error names the file and line where scanning went off track.
+
+The [operator guide](https://github.com/mrnouiouat/retrocat/blob/main/docs/OPERATOR-GUIDE.md) describes the two-pass scanning method used during the original project.
+
+### 7. Process the shelf
 
 ```bash
-cd sample
 retrocat shelf --scan scans/shelf-a.txt --export catalog_export.csv
 ```
 
-Expected output, give or take whatever the APIs are doing today:
+![Terminal example of retrocat processing one shelf and identifying the barcode that needs manual review](https://raw.githubusercontent.com/mrnouiouat/retrocat/main/docs/shelf-run.gif)
 
+The command creates:
+
+```text
+output/
+    shelf-a/
+        shelf-a.mrc
+        master_table.csv
+
+manual/
+    shelf-a.csv
 ```
-INFO retrocat.catalog: catalog loaded: 58 rows (2 non-book skipped), 88 ISBN forms, 55 barcodes | ...
-INFO retrocat.classify: classification counts: {'CREATE': 6, 'MERGE_CANDIDATE': 1, 'ALREADY_DONE': 1, 'MANUAL': 1, 'CONFLICT': 0}
-INFO retrocat.pipeline: reconciliation gate passed: 9 scanned = {...}
-INFO retrocat.marc_build: wrote 6 MARC records to output/shelf-a/shelf-a.mrc
-OK: 9 scanned -> 6 MARC records (output/shelf-a/shelf-a.mrc); counts: {'CREATE': 6, 'MERGE_CANDIDATE': 1, 'ALREADY_DONE': 1, 'MANUAL': 1, 'CONFLICT': 0}
 
-NEEDS HUMAN REVIEW (see master_table.csv for details):
-  MANUAL - fill in title/author in manual/<shelf>.csv [1]: 500115
+`shelf-a.mrc` is a shelf-level file for spot-checking. `master_table.csv` has one row for every scanned book and shows what retrocat decided, which metadata it used, where the call number came from, and how confident that result was.
 
-1 book(s) need manual identification - fill in title/author at: manual/shelf-a.csv
+The manual CSV contains only books that could not be completed automatically. The terminal prints the exact barcodes that need review, so you do not have to hunt through the full audit table to find them.
+
+Every scanned item receives one of five results:
+
+- `CREATE`: make a new resource and copy
+- `MERGE_CANDIDATE`: the resource appears to exist, but this physical copy needs to be added or merged
+- `ALREADY_DONE`: the scanned barcode is already represented in the catalog
+- `MANUAL`: no source could identify the book well enough to build the record
+- `CONFLICT`: the data is ambiguous, so output is blocked until someone reviews it
+
+### 8. Fill in anything retrocat could not identify
+
+Open `manual/shelf-a.csv` in Excel, LibreOffice, or another CSV editor. Its columns are:
+
+```text
+shelf, barcode, isbn, title, author, call_number, language, notes
 ```
 
-Open `manual/shelf-a.csv` and type a title for the lone-barcode book. That's
-the human step between the two commands. Then build the combined file:
+![Example of completing the title in the manual shelf worklist](https://raw.githubusercontent.com/mrnouiouat/retrocat/main/docs/manual-worklist.gif)
+
+A row is usable once you supply a title. Add the author, call number, and language when you know them. If the call number is left blank, retrocat can build an LC-shaped fallback and mark it for review.
+
+You can rerun the shelf command after editing the file. Values entered in the manual worklist are preserved instead of being overwritten.
+
+If a run reports a conflict, inspect the corresponding rows in `master_table.csv` before going further. The `--allow-conflicts` flag will write the non-conflicting records and continue to exclude the conflicted books, but it should only be used after you understand what caused the conflict.
+
+Repeat the scan, shelf command, and manual review for the rest of the collection.
+
+### 9. Build the final import
+
+When every shelf has been processed:
 
 ```bash
 retrocat final --scans scans --export catalog_export.csv
 ```
 
-```
-OK: 11 scanned -> 8 MARC records (output/_final/catalog_import.mrc); counts: {'CREATE': 8, 'MERGE_CANDIDATE': 1, 'ALREADY_DONE': 1, 'MANUAL': 1, 'CONFLICT': 0}
-Nothing flagged for review.
+![Terminal example of retrocat building the combined MARC file and finishing with nothing left for review](https://raw.githubusercontent.com/mrnouiouat/retrocat/main/docs/final-build.gif)
 
-Manual worklists: 1/1 filled and shipped in the MARC file.
-```
+The final files are written under:
 
-`output/_final/catalog_import.mrc` is the file you'd hand to your ILS. The
-final file is always built by re-running over all shelves together, never by
-concatenating per-shelf `.mrc` files, and that's what makes a book scanned on
-two shelves import as one resource with two copies. There's also
-`sample/conflict-demo.txt` if you want to watch the conflict gate refuse to
-write.
-
-## Sample input and output
-
-A scan file is alternating ISBN/barcode lines, one code per line, which is
-exactly what a USB barcode scanner types for you:
-
-```
-9781565645998
-500101
-9780199836741
-500102
-500115          <- lone barcode: a book with no ISBN, routed to MANUAL
+```text
+output/_final/
 ```
 
-`master_table.csv` is the thing you spot-check, one row per scanned book:
+The MARC filename comes from `[output].mrc_filename` in `config.toml`. With the sample configuration, it is:
 
-```
-shelf    barcode  action           title                       call_number          call_number_source
-shelf-a  500102   CREATE           Reading the Qur'an          BP130.4 .S376 2011   openlibrary
-shelf-a  500104   CREATE           Hitler's American Model     KK4743 .W48 2018     loc
-shelf-a  500115   MANUAL           Untitled Local Chapbook     AC .C38              manual
-shelf-a  500101   MERGE_CANDIDATE  Abu Zayd al-Balkhi's ...    R128.3 .B34213 2013  openlibrary
+```text
+output/_final/catalog_import.mrc
 ```
 
-And here's a decoded MARC record from a live run. It's a merge candidate, so
-it carries both ISBN forms, insurance against an ILS merge tool that matches
-ISBN strings literally:
+retrocat rebuilds the final file from all scan files together. It does not concatenate the shelf-level `.mrc` files. That matters when the same title appears on more than one shelf: one resource can be written with a separate holdings pair for each physical barcode.
 
-```
-=LDR  00458nam a2200121 a 4500
-=008  260809s\\\\\\\\xx\\\\\\\\\\\\000\0\eng\d
-=020  \\$a9781565645998
-=020  \\$a1565645995
-=100  1\$aMalik Badri
-=245  00$aAbu Zayd al-Balkhi's Sustenance of the Soul: The Cognitive Behavior Therapy of A Ninth Century Physician
-=050  \4$aR128.3 .B34213 2013
-=852  \\$bAnytown College Library$cMain Campus$hR128.3 .B34213 2013$p500101
-=876  \\$p500101$hR128.3 .B34213 2013$jAvailable
-```
+Before importing the final file, review `output/_final/master_table.csv` and confirm that the manual worklist is complete.
 
-## Standalone tool: LC call numbers without the pipeline
+### 10. Test it in the ILS
 
-The offline call-number generator is useful on its own. If you know a book's
-LC class and just need a properly shaped, non-colliding shelf number, you can
-call it directly with no config and no network:
+MARC21 is widely supported, but the holdings fields used for location and status are not identical in every library system. Before a production import, load a representative file into the ILS sandbox and check:
+
+- Title and author
+- ISBN matching and merge behavior
+- Call number
+- Item barcode
+- Home library and location
+- Availability status
+- A title with more than one physical copy
+- At least one manually completed record
+
+Back up the production catalog before the full import. retrocat writes import files; it does not connect to or edit the ILS database directly.
+
+## Try it with the sample data
+
+The repository contains a small synthetic catalog and two shelf scans. The ISBNs are real, so the metadata step uses the live public services.
 
 ```bash
-# Full call number: class + Cutter (Shelflisting Manual G 63) + year
-$ retrocat callnumber --lc-class BP130 --author "Garry Wills" --year 2017
-BP130 .W55 2017
-
-# Just the Cutter for a word
-$ retrocat callnumber --cutter Wills
-W55
-
-# A whole spreadsheet at once: reads a CSV with an lc_class column
-# (optional author/title/year/corporate), writes it back with a
-# call_number column appended
-$ retrocat callnumber --batch books.csv > books_with_callnumbers.csv
+git clone https://github.com/mrnouiouat/retrocat.git
+cd retrocat
+python -m pip install -e .
+cd sample
+retrocat shelf --scan scans/shelf-a.txt --export catalog_export.csv
 ```
 
-It follows LC main-entry practice: personal authors Cutter on the surname,
-corporate bodies on the organization's first significant word (auto-detected
-from common org keywords, or forced with `--corporate`), and books with no
-author on the first significant title word, skipping leading articles. The
-same code imports as a library: `from retrocat.lc_call import cutter,
-build_call_number`.
+Open `manual/shelf-a.csv` and add a title for the unresolved book. Then run:
 
-## Adapting it to your library
+```bash
+retrocat final --scans scans --export catalog_export.csv
+```
 
-Five steps from clone to your first shelf:
+The finished sample file will be at `output/_final/catalog_import.mrc`.
 
-1. `pip install retrocat` and put a copy of `sample/config.toml` next to your
-   data.
-2. Export your catalog from your ILS as CSV and put your export's exact column
-   headers in `[catalog.columns]`. retrocat aborts with a clear list if they
-   don't match the file.
-3. Describe your barcode scheme in `[barcodes]`, or set
-   `valid_new_ranges = []` if you don't have one.
-4. Scan one shelf, two lines per book, ISBN then barcode. See
-   [docs/OPERATOR-GUIDE.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/OPERATOR-GUIDE.md) for the two-sweep method
-   that keeps that from being tedious. Then run `retrocat shelf` on it.
-5. Read `output/<shelf>/master_table.csv`, fill in `manual/<shelf>.csv`, and
-   once every shelf is done, `retrocat final` builds the one file to
-   sandbox-test in your ILS.
+If anonymous Google Books requests are being rate-limited, the sample may pause while it backs off. Add a Google Books key to `sample/.env` or let the other sources finish independently.
 
-A few things worth knowing before you start:
+There is also a `sample/conflict-demo.txt` file if you want to see the conflict gate refuse to write unsafe output:
 
-- **Config first.** `[library]` (name, location, status, default MARC
-  language), `[barcodes]` (your scheme; an empty `valid_new_ranges` turns the
-  new-sticker range check off), `[catalog.columns]` (your export's exact
-  headers, validated at load), `[output]`. The comments in
-  `sample/config.toml` walk through each one.
-- **Your collection's subjects.** The class-fallback map at
-  `src/retrocat/data/lc_class_map.toml` turns vendor subject categories into
-  LC classes, and the shipped version is tuned to a religious-studies
-  collection as a worked example. Copy it, edit it, and point
-  `[lookup].class_map_file` at your copy.
-- **The one genuinely ILS-specific surface** is the `852`/`876` holdings pair
-  in `marc_build.py`, since which subfields carry location and status varies
-  by system. It's sandbox-validated against exactly one ILS, so check it
-  against your importer's documentation. You can also blank `location` and
-  `status` in config and let your ILS apply its own import defaults, which is
-  the path the pilot actually validated.
-- **Tests.** `python -m pytest`. Fully offline, including a golden-file
-  integration test over real pilot data and a hermetic end-to-end run of the
-  two-command flow above.
+```bash
+retrocat shelf --scan conflict-demo.txt --export catalog_export.csv
+```
 
-## Where it falls short
+## Standalone LC call-number generator
 
-- **It isn't fully unattended.** Somebody has to fill in the manual worklist
-  between the two commands. Those are books no API can identify, so there's no
-  way around it, but it is a human step.
-- **Multi-copy grouping has never been through a live import.** The structure
-  is unit-tested and the pilot happened to contain no multi-copy book. Confirm
-  one in your ILS's sandbox before you run a full import.
-- **Class-fallback call numbers are guesses at the subject level.** The Cutter
-  and year are exact transforms of real metadata; the LC class is inferred
-  from vendor categories, and Google Books will occasionally insist that a
-  book on Islamic theology is Juvenile Fiction. They ship `confidence=low`
-  precisely so you spot-check them.
-- **LoC SRU is unreachable from some networks.** It self-disables after three
-  consecutive connection failures and the run carries on with the other two
-  sources.
-- **One ILS.** Every sandbox claim here involves a single vendor's importer.
-  [docs/VALIDATION.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/VALIDATION.md) is specific about what that does
-  and doesn't cover.
+The call-number command does not need `config.toml`, a catalog export, or a network connection.
 
-## Project docs
+Build a call number from an LC class, author, and year:
 
-- [docs/DESIGN.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/DESIGN.md): data contracts, classification rules, and
-  the edge-case reasoning behind them
-- [docs/OPERATOR-GUIDE.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/OPERATOR-GUIDE.md): the shelf-by-shelf capture
-  process for actually running a backfill
-- [docs/VALIDATION.md](https://github.com/mrnouiouat/retrocat/blob/main/docs/VALIDATION.md): what's been validated, and how
-- [DECISIONS.md](https://github.com/mrnouiouat/retrocat/blob/main/DECISIONS.md): the design decisions behind the generalized
-  version, and why each one went the way it did
-- [CHANGELOG.md](https://github.com/mrnouiouat/retrocat/blob/main/CHANGELOG.md): what changed between releases
+```bash
+retrocat callnumber --lc-class BP130 --author "Garry Wills" --year 2017
+```
+
+```text
+BP130 .W55 2017
+```
+
+Generate only the Cutter:
+
+```bash
+retrocat callnumber --cutter Wills
+```
+
+```text
+W55
+```
+
+Add call numbers to a CSV:
+
+```bash
+retrocat callnumber --batch books.csv > books_with_callnumbers.csv
+```
+
+The input needs an `lc_class` column. It can also include `author`, `title`, `year`, and `corporate`. The output contains all of the original columns plus `call_number`.
+
+The same functions can be imported in Python:
+
+```python
+from retrocat.lc_call import build_call_number, cutter
+
+print(cutter("Wills"))
+print(build_call_number("BP130", author="Garry Wills", year=2017))
+```
+
+## How retrocat handles messy data
+
+The hardest part of the original project was deciding whether two imperfect pieces of data referred to the same physical book without creating another bad record.
+
+Catalog exports often store ISBN-10, while scanners read ISBN-13. retrocat converts every valid ISBN into canonical ISBN-13 before comparing anything. That keeps the same title from looking new just because the scanner and ILS use different forms of the identifier.
+
+It also validates the configured CSV column names before loading the export. Without that check, a renamed ISBN column could quietly disable matching and make an entire shelf appear uncataloged.
+
+Metadata lookups are cached, transient failures are retried with bounded backoff, and one failing source does not take down the others. A temporary error is not cached as a permanent missing result.
+
+When a source supplies a call number, retrocat keeps the source with it. When it has to infer the subject class and generate the rest locally, the number is marked low confidence and appears in the review digest. A plausible-looking guess never gets presented as equal to a number supplied by the Library of Congress.
+
+For each distinct ISBN, retrocat writes one MARC resource record and one `852`/`876` holdings pair per physical barcode. Each generated record is read back through a MARC reader before it is written to disk.
+
+The classification totals must also add back up to the number of scanned books. If they do not, or if unresolved conflicts remain, the normal MARC write is blocked.
+
+## Adapting it to another library
+
+Most changes belong in `config.toml`, not in the Python code. The library name, location, status, barcode scheme, export column names, default language, and output filename are already configurable.
+
+The bundled subject-to-LC-class map is a worked example based on a religious-studies collection. To use a different map, copy `src/retrocat/data/lc_class_map.toml`, edit it for the collection, and set `[lookup].class_map_file` to the copied file.
+
+The main ILS-specific surface is the `852`/`876` holdings mapping in `marc_build.py`. Different importers may expect location and status in different subfields. Verify those fields against the target ILS documentation, or leave location and status blank in `config.toml` and let the importer apply its own defaults.
+
+## Production use and current limits
+
+retrocat was used end to end to complete a clean 2,227-book import at the library where it was developed. It corrected the disconnect between the physical shelves and the online catalog, while keeping the records that needed judgment separate from the routine work.
+
+It is still a batch cataloging tool, not a live two-way integration with an ILS. Books that cannot be identified need someone to fill in the worklist. Inferred subject classes need to be checked. Public metadata can be incomplete, and each new ILS needs its own sandbox test for holdings behavior.
+
+Those are boundaries of the data, so at the end of the day, the tool's job is to automate the repeatable work and make the remaining uncertainty obvious.
+
+## Project documentation
+
+- [Operator guide](https://github.com/mrnouiouat/retrocat/blob/main/docs/OPERATOR-GUIDE.md): the physical scanning and shelf-by-shelf workflow
+- [System design](https://github.com/mrnouiouat/retrocat/blob/main/docs/DESIGN.md): data contracts, invariants, and classification rules
+- [Validation status](https://github.com/mrnouiouat/retrocat/blob/main/docs/VALIDATION.md): the completed production deployment and checks for a new ILS
+- [Decision log](https://github.com/mrnouiouat/retrocat/blob/main/DECISIONS.md): why the generalized version works the way it does
+- [Changelog](https://github.com/mrnouiouat/retrocat/blob/main/CHANGELOG.md): release history
+
+## Development
+
+```bash
+git clone https://github.com/mrnouiouat/retrocat.git
+cd retrocat
+python -m venv .venv
+```
+
+Activate the environment on macOS or Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+Or on Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Install the development dependencies and run the tests:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
+```
+
+This project has 285 fully offline tests, including golden-file and end-to-end coverage. HTTP calls are mocked, so the test suite does not depend on public APIs. CI runs it on Python 3.11, 3.12, and 3.13.
 
 ## License
 
-MIT.
+[MIT](https://github.com/mrnouiouat/retrocat/blob/main/LICENSE)

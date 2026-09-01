@@ -1,87 +1,95 @@
-# Validation status: what has actually been proven, and how
+# Validation status
 
-An honest inventory of what backs each claim this project makes. "Validated"
-here means someone loaded real output into a real system and checked the
-result, not "the tests pass."
+This document separates what retrocat has done in a real library from what an
+adopter still needs to verify in a new system. Here, "validated" means that
+the pipeline produced MARC output, that output was imported into an ILS, and
+the resulting catalog was checked. It does not just mean that the tests pass.
 
-## Sandbox-validated: the MARC field mapping
+## Completed production deployment
 
-A 17-record pilot file built with exactly the field structure `marc_build.py`
-emits (leader, `008`, `020`, `100`/`110`, `245`, `050`, and one `852`/`876`
-pair per copy) was loaded by an ILS vendor's support team into their sandbox
-environment. They confirmed the import produced correct results at both
-levels:
+retrocat was used end to end to complete a clean **2,227-book catalog import**
+for the nonprofit seminary where the project began.
 
-- **Resource level:** title and author landed correctly.
-- **Copy level:** call number, barcode, home library/location, and status
-  landed correctly.
+The production workflow included:
 
-The pilot came from a real 20-book shelf at the small academic library where
-this pipeline was first deployed, named in the README with permission. The
-byte-for-byte vendor-accepted file remains in that library's internal
-repository. What ships here is a structural golden file regenerated from the
-pipeline with substituted institution values; `tests/fixtures/README.md` gives
-the exact provenance.
+- Capturing the physical collection through paired ISBN and item-barcode scans
+- Reconciling those scans against the library's existing ILS export
+- Separating new resources, merge candidates, completed items, manual records,
+  and conflicts
+- Resolving bibliographic metadata through the configured public sources
+- Reusing, correcting, or generating LC call numbers as the data required
+- Completing the manual worklists for books the public sources could not
+  identify
+- Building the combined MARC21 file and importing it into the production ILS
 
-## Reproduction check: retrocat against the original internal tool (2026-08-09)
+This was the full backfill, not a sample run. It brought the physical shelves
+and the online catalog back into sync after students had been unable to rely on
+the catalog to tell them whether the library owned a title, where it was, or
+whether a copy was available.
 
-As an adopter dry-run, retrocat was pointed at the source library's *real*
-first-shelf data: a 64-line scan file, a roughly 2,100-row ILS export, and the
-operator's actual hand-filled worklist. It ran from a fresh directory with a
-fresh `config.toml` copied from `sample/config.toml` and edited in four places
-(library identity, barcode ranges, column names, output filename), with a cold
-lookup cache, live APIs, and Google Books unavailable. Compared row by row
-against the original internal pipeline on the same data:
+## The data was not clean before the import
 
-- **Bucket counts and per-barcode classifications were identical**, across 32
-  books: 31 CREATE, 1 MANUAL. Record counts were identical too, at 32, all
-  round-tripping.
-- **30 of 32 call numbers were identical.** The two divergences were the two
-  books whose subject class had to be defaulted without Google's category
-  data, which are exactly the books the review digest flags as "verify
-  shelving" in both runs.
-- Remaining diffs, meaning title casing on 18 records and one `008` language
-  code, all traced back to source availability. With Google down,
-  OpenLibrary's sentence-case titles win the per-field priority, and a
-  language signal only Google carried fell back to the configured default.
-  Same books, same structure, no classification drift.
+The source catalog was useful, but it could not be treated as a pristine source
+of truth. The real collection included uncataloged books, missing or incorrect
+LC call numbers, mismatched barcodes, inconsistent ISBN forms, and records that
+did not reliably describe the copies on the shelves.
 
-One caveat surfaced that's worth stating plainly: **the `008` language signal
-often comes only from Google Books**, since LoC misses many small-press
-titles. With Google unavailable, non-English books get stamped with the
-configured default language. The manual worklist's `language` column is the
-hand-fix for books you know are non-English, and a spot-check of `008`s is
-worthwhile if Google was down during your run.
+Those conditions shaped the pipeline's safety checks. ISBN comparison is
+canonical, configured CSV headers are validated before any rows are read,
+barcode disagreements become conflicts, and each scan must land in exactly one
+classification bucket. Records that cannot be completed safely go to a manual
+worklist instead of receiving placeholder metadata.
 
-## Structurally tested but NOT sandbox-validated
+The completed deployment demonstrates that this reconciliation model can be
+used at full-collection scale, including the human review step between shelf
+triage and the final build.
 
-- **Multi-copy grouping**, where the same ISBN on two barcodes produces one
-  resource record with two `852`/`876` pairs. The pilot contained no
-  multi-copy book, so this path has never been through a live import. The
-  structure is unit-tested. Confirm that one multi-copy record imports as one
-  resource with two attached copies in *your* ILS's sandbox before a full
-  live import.
-- **Dual `020` merge insurance**, where a merge candidate emits both the
-  scanned ISBN-13 and the export's stored ISBN-10. It's harmless if your ILS
-  matches ISBNs canonically, and the second form only matters if it matches
-  literally. Untested against any live merge tool.
-- **The post-pilot `852 $c` and `876 $j` location/status subfields.** The
-  pilot relied on the ILS's import defaults and the explicit subfields were
-  added afterward. Verify your ILS reads them, or blank them in config and use
-  your ILS's defaults, which is the pilot-validated path.
+## What the completed import establishes
 
-## Validated against exactly one ILS
+For the ILS used by the source library, retrocat successfully produced and
+imported the resource- and copy-level data needed for the completed catalog.
+That includes bibliographic records, call numbers, item barcodes, and holdings
+information used to reconnect physical copies with the online catalog.
 
-Every sandbox claim above involves one vendor's import tool. The `852`/`876`
-holdings subfields are the single most ILS-specific surface in MARC holdings
-data, since different systems expect different subfield codes for location and
-status. Treat `marc_build.py`'s holdings block as a template to verify against
-your own importer's documentation rather than as portable truth.
+It also establishes that the operational workflow is practical: shelves can be
+processed independently, worklist edits survive reruns, and the final command
+can rebuild one combined import across the complete set of scan files.
 
-## What deliberately has no validation claim
+## Automated verification
 
-- No claim that any full production backfill has completed with this tool.
-- Class-fallback and default-class call numbers are `confidence=low`
-  estimates. The LC subject class is inferred from vendor categories, and only
-  the Cutter and year are exact transforms of real metadata. They exist to be
-  spot-checked.
+The repository has 285 offline tests, including parser and classification edge
+cases, ISBN normalization, catalog-header validation, lookup failure handling,
+manual-worklist preservation, call-number generation, MARC round trips, a
+golden-file integration test, and the two-command sample workflow.
+
+CI runs the suite on Python 3.11, 3.12, and 3.13. HTTP behavior is mocked, so a
+test cannot pass or fail because a public metadata service happens to be down.
+
+The golden fixtures preserve data from the project's earlier validation work.
+They are regression fixtures, not the basis of the production-completion claim
+above.
+
+## What a new library still needs to verify
+
+The completed deployment involved one ILS. MARC21 is portable, but import rules
+for holdings, merging, location, and status are not identical across vendors.
+Every adopter should load a representative final file into the target system's
+sandbox and check:
+
+- `852` and `876` holdings fields, including location and status
+- ISBN merge behavior, including ISBN-10 and ISBN-13 forms
+- One title with multiple physical barcodes
+- At least one manually completed record
+- The treatment of existing copy-level call numbers during a resource merge
+
+Low-confidence call numbers also remain estimates. The Cutter and year are
+deterministic transforms of the available metadata, but a subject class inferred
+from vendor categories needs a librarian's spot-check.
+
+Language needs similar care when metadata coverage is incomplete. If no source
+reports a language, retrocat uses the configured default; the manual worklist's
+`language` column can override it for a known title.
+
+The production import proves that retrocat completed the job it was built for.
+It does not remove the need to verify another ILS's import behavior before
+using it on that system.

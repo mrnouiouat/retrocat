@@ -235,14 +235,18 @@ degradation. I omitted Google's failure warnings from the quoted output
 because they came from a stale environment artifact on my machine rather than
 anything a stranger would see.
 
-**The adopter dry-run used the source library's real data.** Fresh directory,
-real 64-line shelf scan and real 2,100-row export copied in (never into this
-repo), `config.toml` copied from the sample and edited in four places, cold
-cache, live APIs. Full flow, including the operator's real hand-entered
-worklist title surviving the merge. Then diffed row by row against the
-internal pipeline on the same data: identical classifications, 30 of 32
-identical call numbers, every divergence traceable to Google being down.
-Details in `docs/VALIDATION.md` under "Reproduction check."
+**The source library completed a clean 2,227-book production import with the
+pipeline.** That run covered the full shelf-to-ILS workflow: paired scans,
+reconciliation against messy catalog data, manual worklists, call-number
+resolution, the combined MARC build, and the production import. The completed
+deployment is summarized in `docs/VALIDATION.md`.
+
+Before production, an adopter-style dry-run used the source library's real
+data from a fresh directory: a real 64-line shelf scan and real 2,100-row
+export copied in (never into this repo), `config.toml` copied from the sample
+and edited in four places, a cold cache, and live APIs. It reproduced the
+internal pipeline's classifications and showed that hand-entered worklist data
+survived the generalized workflow.
 
 That run surfaced a real caveat worth repeating here: **the `008` language
 signal often comes only from Google Books**, since LoC misses many small-press
@@ -252,12 +256,12 @@ why that column exists.
 
 ## Open items
 
-- Multi-copy grouping is structurally tested but has never been through a live
-  import, because the pilot contained no multi-copy book. Someone needs to
-  confirm one in an ILS sandbox before a full production import.
-- The dual-`020` merge insurance is untested against any live merge tool. It's
-  harmless if your ILS matches ISBNs canonically and only matters if it
-  matches them literally.
+- Multi-copy grouping is structurally tested, but holdings behavior remains
+  ILS-specific. Every adopter should include one resource with two barcodes in
+  the target system's sandbox check.
+- The dual-`020` merge insurance still needs to be checked against each target
+  ILS. It is harmless when an importer matches ISBNs canonically and matters
+  only when it compares the strings literally.
 - The class-fallback map is tuned to a religious-studies collection. It works
   as a documented worked example, but retrocat has never been run against a
   collection with a genuinely different subject profile, so how much editing
