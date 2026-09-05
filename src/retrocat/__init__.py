@@ -1,9 +1,8 @@
-"""retrocat: retrospective conversion cataloging.
+"""retrocat: retrospective cataloging for small libraries.
 
-Converts paired barcode-scanner output (ISBN + item barcode per book) into a
-validated MARC21 ``.mrc`` file for bulk import into a library ILS, deduping
-against an export of the existing catalog and emitting reconciliation reports
-before any MARC file is written.
+Keeps physical collections and online catalogs in sync by reconciling paired
+ISBN and item-barcode scans against an existing catalog export, then producing
+validated MARC21 output and focused review reports.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.3"

@@ -8,6 +8,21 @@ Design reasoning lives in [DECISIONS.md](DECISIONS.md), which explains *why*
 the pipeline works the way it does. This file only records what changed
 between releases.
 
+## [Unreleased]
+
+### Changed
+
+- Reworked the README around the completed 2,227-book production import and a
+  complete adopter workflow, with short visual examples for shelf processing,
+  manual review, and the final MARC build.
+- Updated the package summary and operator guidance to match the project's
+  current scope and public documentation.
+
+### Fixed
+
+- Synchronized the importable package version with the published project
+  version.
+
 ## [0.1.3] - 2026-08-09
 
 ### Changed
@@ -84,6 +99,7 @@ First public release.
 - Configuration through `config.toml`, covering library identity, barcode
   scheme, catalog column mapping, and output filename.
 
+[Unreleased]: https://github.com/mrnouiouat/retrocat/compare/v0.1.3...HEAD
 [0.1.3]: https://github.com/mrnouiouat/retrocat/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/mrnouiouat/retrocat/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/mrnouiouat/retrocat/compare/v0.1.0...v0.1.1

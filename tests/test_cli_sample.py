@@ -25,8 +25,8 @@ from retrocat.lookup import BookMetadata
 
 SAMPLE = Path(__file__).resolve().parent.parent / "sample"
 
-# What the stubbed lookup "resolves"titles for every ISBN the sample scans
-# contain, so classification is deterministic without HTTP.
+# The stubbed lookup resolves titles for every ISBN in the sample scans, so
+# classification is deterministic without HTTP.
 TITLES = {
     "9781565645998": "Abu Zayd al-Balkhi's Sustenance of the Soul",
     "9781565646988": "Qur'anic Terminology",

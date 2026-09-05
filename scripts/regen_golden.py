@@ -4,6 +4,8 @@ The golden file is a structural regression pin (see fixtures/README.md), so
 after a DELIBERATE, reviewed change to the MARC mapping it is regenerated
 from the pipeline itself with the same pinned inputs the golden test uses:
 
+Run this command from the repository root:
+
     python scripts/regen_golden.py
 
 Never regenerate to silence a failing golden test you don't understand.
