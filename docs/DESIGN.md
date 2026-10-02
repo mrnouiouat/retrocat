@@ -176,8 +176,9 @@ applies its own defaults.
 - **Multi-copy grouping:** books are grouped by canonical ISBN-13 *before*
   record building, giving one resource with one 852/876 pair per barcode. The
   ILS vendor confirmed this is cleaner than relying on their merge tool for
-  same-file duplicates. It has never yet been observed in a live import (see
-  VALIDATION.md).
+  same-file duplicates. Multiple copies imported correctly in the source
+  library's completed 2,227-book production import (see VALIDATION.md).
+  Each adopter should still verify holdings behavior in the target ILS.
 - **Dual 020s:** a merge candidate whose export row stores a different ISBN
   form emits both forms, as insurance in case the ILS merge tool matches ISBN
   strings literally rather than canonically.
@@ -217,3 +218,50 @@ simpler and more correct than trying to detect which existing values were
 worth keeping. When the export has no call-number column configured, the
 report says so explicitly in each row instead of emitting blanks that would
 read as "no call number on record."
+
+
+## Optional run analytics (`analytics.py`)
+
+`--analytics-db PATH` opts a shelf or final run into a local SQLite snapshot.
+`run_pipeline` wraps the existing execution with a best-effort observer; stage
+boundaries supply existing in-memory results. Analytics does not change
+classification, lookup, import gates, or MARC generation, and does not make
+additional network requests.
+
+The schema has five tables and four views:
+
+| Table | Grain |
+|---|---|
+| `runs` | One execution, identified by a generated run ID |
+| `actions` | One existing classification action |
+| `run_items` | One deduplicated barcode per run |
+| `provenance` | One known field value/source per run item; currently call number |
+| `issues` | One issue code per run item |
+
+`run_summary`, `action_counts`, `call_number_sources`, and `review_queue`
+provide SQL interfaces. Summary subqueries keep multiple issues from multiplying
+item counts. Barcodes remain text, preserving leading zeros. Use one database
+per library; repeated shelf and final executions are separate snapshots, not
+additive collection-progress measurements.
+
+Each run records its status, paths, configuration, and package version. Item
+snapshots become available after metadata and manual resolution. Earlier
+failures record unavailable derived metrics as SQL NULL. MARC inclusion comes
+from the records returned after a successful write, not classification labels
+or report notes. A resolved manual item keeps its MANUAL action but is no longer
+pending identification. Generated manual call numbers have `manual_default`
+provenance and receive a shelving-review issue.
+
+One transaction persists each execution. A database application ID and schema
+version identify the store; unrelated databases and unsupported versions are
+refused. Database errors are warnings and never replace the pipeline result or
+original exception. SQL-derived Markdown and CSV reports are written after the
+snapshot commits, using temporary files and individual atomic replacements.
+They include run IDs; a report failure can leave an older report, so warnings
+and run IDs matter. Report failure does not roll back committed history.
+
+The CSV queue is advisory and has no approval or write-back path. Existing
+workflows remain the way to correct records. This version does not retain full
+source payloads, input hashes, human decision history, or source-request
+telemetry. Its call-number source labels describe provenance, not calibrated
+accuracy. It has no LLM or post-import verification capability.

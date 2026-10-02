@@ -5,4 +5,4 @@ ISBN and item-barcode scans against an existing catalog export, then producing
 validated MARC21 output and focused review reports.
 """
 
-__version__ = "0.1.3"
+__version__ = "0.2.0"

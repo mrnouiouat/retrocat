@@ -141,3 +141,25 @@ Load the `final` output into your ILS's sandbox or test environment and check:
   produce the same output. Fixing a scan error and re-running is always safe.
   Nothing mutates your scan files or your catalog export, and there's no
   write-back to your ILS of any kind.
+
+
+## Optional analytics and review queue
+
+Add `--analytics-db .cache/runs.sqlite` to the shelf or final command to retain
+run history. The output directory will also contain `run_report.md` and
+`review_queue.csv`. Open the report first, then work through the queue in
+priority order: conflicts, identification/shelving checks, then estimates and
+call-number differences.
+
+The queue supplements the existing reports. A filled manual title can still
+need a shelving check if its call number was generated from the default class.
+A reported call-number difference does not prove either value is wrong. Make
+corrections through the existing workflow and rerun; editing the queue itself
+does not change pipeline decisions.
+
+Keep the SQLite database if you want history, and use a separate database for
+each library. Repeated shelf and final runs overlap; their counts are not
+additive. MARC inclusion confirms output generation, not successful ILS import.
+If analytics reports a warning, check the report's run ID before relying on it:
+an older report may remain. Full schema and query examples are in the README's
+[optional analytics section](../README.md#optional-run-analytics).

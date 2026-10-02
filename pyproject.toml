@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "retrocat"
-version = "0.1.3"
+version = "0.2.0"
 description = "Keep physical library collections and online catalogs in sync, from ISBN and barcode scans to validated MARC21"
 readme = "README.md"
 license = "MIT"

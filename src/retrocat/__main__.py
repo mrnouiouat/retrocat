@@ -129,6 +129,7 @@ def _cmd_shelf(args: argparse.Namespace, config: Config) -> int:
         mrc_name=f"{shelf}.mrc",
         manual_worklist_path=worklist,
         allow_conflicts=args.allow_conflicts,
+        analytics_db=args.analytics_db,
     )
     _print_result(result, out_dir / f"{shelf}.mrc")
     manual_count = result.counts.get("MANUAL", 0)
@@ -159,6 +160,7 @@ def _cmd_final(args: argparse.Namespace, config: Config) -> int:
         manual_worklist_path=out_dir / "unfilled_manual.csv",
         manual_entries=manual_entries,
         allow_conflicts=args.allow_conflicts,
+        analytics_db=args.analytics_db,
     )
     _print_result(result, out_dir / config.output.mrc_filename)
     filled = sum(1 for e in manual_entries if e.filled)
@@ -263,6 +265,10 @@ def _add_common_args(sub: argparse.ArgumentParser) -> None:
         help="protected dir for fill-in worklists (default: manual)",
     )
     sub.add_argument("--cache", default=".cache/lookup_cache.json")
+    sub.add_argument(
+        "--analytics-db", metavar="PATH",
+        help="append run analytics to SQLite and write run_report.md/review_queue.csv",
+    )
     sub.add_argument(
         "--allow-conflicts", action="store_true",
         help="write the .mrc even if books landed in the CONFLICT bucket "

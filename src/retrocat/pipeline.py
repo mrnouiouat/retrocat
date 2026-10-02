@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
+from .analytics import RunAnalytics
 from .catalog import ExistingCatalog, load_catalog
 from .classify import Action, Classification, ClassifiedBook, classify_books
 from .config import Config
@@ -332,6 +333,7 @@ def run_pipeline(
     manual_worklist_path: str | Path | None = None,
     manual_entries: list[ManualEntry] | None = None,
     allow_conflicts: bool = False,
+    analytics_db: str | Path | None = None,
 ) -> PipelineResult:
     """Run the pipeline over a scans directory OR a single shelf file.
 
@@ -346,14 +348,41 @@ def run_pipeline(
     the union of every shelf's worklist). Each whose barcode is a MANUAL book in
     this run is minted into the MARC file as a ``source="manual"`` record.
 
+    ``analytics_db`` optionally appends a SQLite snapshot and writes an advisory
+    run report and review queue. Analytics failures never change pipeline results.
+
     ``allow_conflicts`` ships the MARC file even when books landed in the
     CONFLICT bucket. The default refuses, see ``_conflict_gate``.
     """
+    with RunAnalytics(analytics_db, scans_dir, export_path, out_dir, config,
+                      allow_conflicts) as analytics:
+        return _run_pipeline(
+            scans_dir, export_path, out_dir, config, cache_path, lookup_client,
+            build_date, mrc_name, manual_worklist_path, manual_entries,
+            allow_conflicts, analytics,
+        )
+
+
+def _run_pipeline(
+    scans_dir: str | Path,
+    export_path: str | Path,
+    out_dir: str | Path,
+    config: Config,
+    cache_path: str | Path,
+    lookup_client: LookupClient | None,
+    build_date: date | None,
+    mrc_name: str | None,
+    manual_worklist_path: str | Path | None,
+    manual_entries: list[ManualEntry] | None,
+    allow_conflicts: bool,
+    analytics: RunAnalytics,
+) -> PipelineResult:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     mrc_path = out_dir / (mrc_name or config.output.mrc_filename)
 
     scanned = _parse_any(scans_dir, config)
+    analytics.scanned_total = len(scanned)
     logger.info("parsed %d scanned books total (after dedupe)", len(scanned))
 
     catalog: ExistingCatalog = load_catalog(export_path, config.catalog)
@@ -385,6 +414,12 @@ def run_pipeline(
             continue
         manual_by_barcode[entry.barcode] = entry
 
+    analytics.classification = classification
+    analytics.metadata = metadata
+    analytics.manual = manual_by_barcode
+    analytics.default_class = class_map.default_class
+    analytics.catalog = catalog
+
     # Gates + all reports BEFORE the MARC file is touched.
     _reconciliation_gate(classification, len(scanned), mrc_path)
     _write_master_table(
@@ -398,6 +433,7 @@ def run_pipeline(
         resolved=set(manual_by_barcode),
     )
     reconcile_rows = build_reconcile(classification.books, metadata, catalog)
+    analytics.reconcile_rows = reconcile_rows
     write_reconcile_csv(reconcile_rows, out_dir / "reconcile.csv")
 
     conflicts = classification.bucket(Action.CONFLICT)
@@ -425,6 +461,8 @@ def run_pipeline(
         config.library,
         build_date=build_date,
     )
+
+    analytics.records = records
 
     result = PipelineResult(
         counts=classification.counts(),

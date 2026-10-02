@@ -256,9 +256,10 @@ why that column exists.
 
 ## Open items
 
-- Multi-copy grouping is structurally tested, but holdings behavior remains
-  ILS-specific. Every adopter should include one resource with two barcodes in
-  the target system's sandbox check.
+- Multi-copy grouping is covered by automated tests and was confirmed in the
+  completed 2,227-book production import. Holdings behavior remains ILS-specific,
+  so every adopter should include one resource with two barcodes in the target
+  system's sandbox check.
 - The dual-`020` merge insurance still needs to be checked against each target
   ILS. It is harmless when an importer matches ISBNs canonically and matters
   only when it compares the strings literally.
@@ -266,3 +267,28 @@ why that column exists.
   as a documented worked example, but retrocat has never been run against a
   collection with a genuinely different subject profile, so how much editing
   that actually takes for an adopter is unmeasured.
+
+
+## Optional analytics, 2026-10-01
+
+**Start with a local report and SQL history.** The first analytics increment
+uses SQLite from the standard library and two reports. It adds no server,
+dashboard, model provider, or external service dependency. Existing classification
+and MARC behavior stay intact.
+
+**Opt in explicitly.** `--analytics-db PATH` preserves existing command behavior
+and lets operators place durable history outside regenerable output. An
+analytics failure warns without blocking a valid MARC build or masking an
+existing pipeline failure.
+
+**Measure actions, completion, and inclusion separately.** A completed manual
+record remains MANUAL, while actual MARC inclusion is observed after writing.
+The review queue includes generated manual defaults and unverified existing
+matches. Call-number differences remain review requests, not asserted errors.
+
+**Keep documentation with its audience.** README and the operator guide explain
+usage; DESIGN records implementation contracts; this file records rationale;
+VALIDATION states evidence and limitations; CHANGELOG records released changes.
+Personal milestone handoffs may live outside the repository, but are not the
+public source of truth. Future analytics and AI ideas remain proposals until
+separately implemented and evaluated.

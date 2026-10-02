@@ -51,13 +51,18 @@ imported the resource- and copy-level data needed for the completed catalog.
 That includes bibliographic records, call numbers, item barcodes, and holdings
 information used to reconnect physical copies with the online catalog.
 
+The completed 2,227-book production import included titles with multiple
+physical copies, and those copies imported correctly into the source library's
+ILS. Multi-copy grouping is therefore covered by both automated tests and
+production use in that system.
+
 It also establishes that the operational workflow is practical: shelves can be
 processed independently, worklist edits survive reruns, and the final command
 can rebuild one combined import across the complete set of scan files.
 
 ## Automated verification
 
-The repository has 285 offline tests, including parser and classification edge
+The repository has 303 offline tests, including parser and classification edge
 cases, ISBN normalization, catalog-header validation, lookup failure handling,
 manual-worklist preservation, call-number generation, MARC round trips, a
 golden-file integration test, and the two-command sample workflow.
@@ -68,6 +73,23 @@ test cannot pass or fail because a public metadata service happens to be down.
 The golden fixtures preserve data from the project's earlier validation work.
 They are regression fixtures, not the basis of the production-completion claim
 above.
+
+## Optional analytics verification
+
+The 0.2.0 analytics addition has 18 offline test cases covering SQL counts,
+multiple copies and issues, manual completion, provenance, deterministic report
+regeneration, appended history, and both CLI commands. Tests compare existing
+MARC and CSV outputs byte-for-byte with analytics enabled and disabled.
+
+Failure cases cover blocked conflicts, early parsing failures, MARC-write
+failures, unavailable storage, unrelated databases, transaction rollback and
+recovery, and committed history surviving report-write failure. The full suite
+passed locally with 303 tests during release preparation.
+
+These checks establish software behavior. The analytics layer has not yet been
+validated through a production operator study, and no review-time savings or
+classification-accuracy improvements are claimed. The completed production
+import described above predates this analytics addition.
 
 ## What a new library still needs to verify
 

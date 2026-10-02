@@ -10,6 +10,19 @@ between releases.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-01
+
+### Added
+
+- Optional local analytics via `--analytics-db PATH` on `shelf` and `final`,
+  using Python's built-in SQLite support with no additional dependencies.
+- Persistent run, item, action, call-number provenance, and issue tables, with
+  SQL views for summaries and operator review.
+- Deterministic `run_report.md` and prioritized `review_queue.csv`, separating
+  manual completion from action buckets and actual MARC inclusion.
+- Offline coverage for analytics counts, unchanged existing outputs, repeated
+  runs, failure isolation, transaction rollback, and both CLI entry points.
+
 ### Changed
 
 - Reworked the README around the completed 2,227-book production import and a
@@ -20,6 +33,8 @@ between releases.
 
 ### Fixed
 
+- Corrected the older multi-copy validation note to record that multiple copies
+  imported correctly in the completed 2,227-book production deployment.
 - Synchronized the importable package version with the published project
   version.
 
@@ -99,7 +114,8 @@ First public release.
 - Configuration through `config.toml`, covering library identity, barcode
   scheme, catalog column mapping, and output filename.
 
-[Unreleased]: https://github.com/mrnouiouat/retrocat/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/mrnouiouat/retrocat/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mrnouiouat/retrocat/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/mrnouiouat/retrocat/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/mrnouiouat/retrocat/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/mrnouiouat/retrocat/compare/v0.1.0...v0.1.1

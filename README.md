@@ -346,6 +346,69 @@ For each distinct ISBN, retrocat writes one MARC resource record and one `852`/`
 
 The classification totals must also add back up to the number of scanned books. If they do not, or if unresolved conflicts remain, the normal MARC write is blocked.
 
+## Optional run analytics
+
+Add `--analytics-db` to either pipeline command to keep local run history:
+
+```bash
+retrocat shelf --scan scans/shelf-a.txt --export catalog_export.csv --analytics-db .cache/runs.sqlite
+retrocat final --scans scans --export catalog_export.csv --analytics-db .cache/runs.sqlite
+```
+
+Each execution appends a snapshot to SQLite and writes two additional files
+alongside the existing shelf or final outputs:
+
+- `run_report.md`: action counts, actual MARC resource/copy counts, pending
+  identification, review totals, and call-number provenance.
+- `review_queue.csv`: one row per item/issue, ordered by priority, shelf, and
+  barcode, with the source scan line and a suggested next action.
+
+Priority 1 covers conflicts, priority 2 covers identification and shelving
+checks, and priority 3 covers estimates and call-number differences. A filled
+manual record stays in the `MANUAL` action bucket but is counted separately
+from pending identification. A manually completed book with a generated default
+call number still gets a shelving check. A difference between existing and
+resolved call numbers is a review request, not a confirmed error.
+
+The database contains five tables: `runs`, `actions`, `run_items`, `provenance`,
+and `issues`. Four views support analysis: `run_summary`, `action_counts`,
+`call_number_sources`, and `review_queue`. For example, using a SQLite client:
+
+```sql
+SELECT run_id, status, scanned_total, marc_records, included_items,
+       pending_manual, review_items, issue_count
+FROM run_summary
+ORDER BY started_at DESC, run_id;
+
+SELECT priority, shelf, barcode, code, detail, next_action
+FROM review_queue
+WHERE run_id = :run_id
+ORDER BY priority, shelf, barcode, code;
+```
+
+Each run stores its input paths, configuration, package version, and status.
+Items retain scan-file/line provenance; call numbers retain the source label
+already known to the resolver, with `manual_default` distinguishing generated
+manual values. This does not establish field accuracy, preserve full input/API
+snapshots, or attribute title/author values to individual metadata services.
+
+SQLite preserves previous runs; the two report files describe the latest
+successfully reported execution at that output location and include its run ID.
+Use a separate database per library. Shelf and final runs overlap, so do not
+sum their totals as collection progress. Store or back up the database outside
+regenerable output; deleting `.cache/runs.sqlite` loses its history.
+
+Failures inside the pipeline also get a run snapshot when storage is available.
+Early failures have unavailable item-derived metrics rather than a clean bill
+of health. Configuration errors before the pipeline starts are not recorded.
+Analytics failures log a warning and preserve the pipeline's original result;
+in that case, any older report is not evidence for the current execution.
+
+The queue is an advisory CSV, not an editable approval system. Make corrections
+through the existing scan/manual/catalog workflow and rerun. Existing gates,
+MARC output, and reports retain their behavior. Analytics uses Python's built-in
+SQLite support, adds no dependencies, and performs no additional network calls.
+
 ## Adapting it to another library
 
 Most changes belong in `config.toml`, not in the Python code. The library name, location, status, barcode scheme, export column names, default language, and output filename are already configurable.
@@ -397,7 +460,7 @@ python -m pip install -e ".[dev]"
 python -m pytest
 ```
 
-This project has 285 fully offline tests, including golden-file and end-to-end coverage. HTTP calls are mocked, so the test suite does not depend on public APIs. CI runs it on Python 3.11, 3.12, and 3.13.
+This project has 303 fully offline tests, including golden-file and end-to-end coverage. HTTP calls are mocked, so the test suite does not depend on public APIs. CI runs it on Python 3.11, 3.12, and 3.13.
 
 ## License
 
